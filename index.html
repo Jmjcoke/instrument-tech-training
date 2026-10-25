@@ -220,6 +220,16 @@ canvas{width:100%;display:block;background:var(--bg);border-radius:8px;border:1p
 .ihist .art{margin:0}
 .cardtag{display:inline-block;font-family:var(--mono);font-size:.68rem;font-weight:700;letter-spacing:.08em;background:var(--tag);color:var(--tag-ink);padding:2px 7px;border-radius:4px;margin-left:8px;vertical-align:2px}
 @media (prefers-reduced-motion: reduce){.art *{animation:none!important}}
+
+/* reviewer mode */
+.revbar{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--warn-soft);border-left:4px solid var(--tag);padding:6px 12px;border-radius:6px;margin:-8px 0 16px;font-size:.92rem}
+.fbbox{display:grid;gap:8px;margin-top:12px;padding:12px;border:2px solid var(--tag);border-radius:10px;background:var(--surface)}
+.fbbox textarea{min-height:70px;font-family:var(--body);font-size:16px}
+.fbseg button.sel.fb-ok{border-color:var(--ok);background:var(--ok-soft)}
+.fbseg button.sel.fb-fix{border-color:var(--warn);background:var(--warn-soft)}
+.fbseg button.sel.fb-wrong{border-color:var(--bad);background:var(--bad-soft)}
+.akey{margin-top:10px}.akey ol{margin:0 0 6px}.akright{font-weight:700;color:var(--ok)}
+.fbsub summary{cursor:pointer;padding:4px 0}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -8224,7 +8234,7 @@ function hookTips(svg, box) {
   parts.forEach(p => { p.setAttribute("tabindex", "0"); const act = () => { parts.forEach(q => q.classList.remove("on")); p.classList.add("on"); box.hidden = false; box.textContent = p.getAttribute("data-tip"); };
     p.addEventListener("click", act); p.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); act(); } }); });
 }
-const ARTIFACT_URL = "";
+const ARTIFACT_URL = "https://jmjcoke.github.io/instrument-tech-training/";  // public, no sign-in
 const PUBLIC_COPY = true;
 const TRAINER_PHONE = "";     // optional: trainer's mobile number for the Text button
 const PASS = 75;
@@ -8233,8 +8243,12 @@ const COURSE = "Instrument Tech Fundamentals";
 /* ---------- per-device progress (convenience only) ---------- */
 const LS = "itt.v1";
 const load = () => { try { return JSON.parse(localStorage.getItem(LS)) || {}; } catch { return {}; } };
-let S = Object.assign({ name: "", best: {}, tries: {} }, load());
+let S = Object.assign({ name: "", best: {}, tries: {}, fb: {} }, load());
 const save = () => { try { localStorage.setItem(LS, JSON.stringify(S)); } catch {} };
+/* reviewer mode: the #review link turns it on for this phone, #student turns it off */
+if ((location.hash || "") === "#review") { S.mode = "review"; save(); }
+if ((location.hash || "") === "#student") { delete S.mode; save(); }
+const REVIEW = () => S.mode === "review";
 
 /* ---------- results code ---------- */
 const b64e = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -8259,12 +8273,14 @@ addEventListener("hashchange", () => { render(); scrollTo(0, 0); });
 const app = document.getElementById("app");
 const modBy = (id) => MODULES.find(m => m.id === id);
 const bubble = (m, big) => h("div", { class: "bubble" + (big ? " big" : "") + ((S.best[m.id]?.pct ?? 0) >= PASS ? " done" : ""), "aria-hidden": "true" }, h("span", { class: "l" }, m.code), h("span", { class: "n" }, m.tag));
-const topbar = (extra) => h("div", { class: "bar" }, h("a", { class: "brand", href: "#home", onclick: (e) => { e.preventDefault(); go("home"); } }, h("span", { class: "dot" }), h("b", {}, COURSE)), extra || "");
+const topbar = (extra) => h("div", {}, h("div", { class: "bar" }, h("a", { class: "brand", href: "#home", onclick: (e) => { e.preventDefault(); go("home"); } }, h("span", { class: "dot" }), h("b", {}, COURSE)), extra || ""),
+  REVIEW() && route() !== "tracker" ? h("div", { class: "revbar" }, h("span", {}, h("b", {}, "Reviewer mode"), ` · ${fbCount()} note${fbCount() === 1 ? "" : "s"}`), h("button", { class: "linkbtn", onclick: () => go("feedback") }, "Send feedback")) : "");
 
 function render() {
   const r = route();
   app.innerHTML = "";
   if (r === "tracker" && !PUBLIC_COPY) return renderTracker();
+  if (r === "feedback") return renderFeedback();
   const m = modBy(r);
   if (m) return renderModule(m);
   renderHome();
@@ -8276,14 +8292,19 @@ function renderHome() {
   const nameIn = h("input", { type: "text", id: "nm", value: S.name, placeholder: "First and last name", autocomplete: "name" });
   nameIn.addEventListener("input", () => { S.name = nameIn.value.trim(); save(); });
   app.append(topbar(EDITOR ? h("button", { class: "linkbtn", onclick: () => go("tracker") }, "Trainer tracker") : ""),
-    h("div", { class: "hero" }, h("div", { class: "eyebrow" }, "Oil field instrumentation · 11 modules"), h("h1", {}, "Become an instrument tech, one loop at a time"),
+    REVIEW() ? h("div", { class: "hero" }, h("div", { class: "eyebrow" }, "Reviewer copy · 11 modules"), h("h1", {}, "Review the instrument tech course"),
+      h("p", {}, "Thanks for checking this over. Open any module in any order. Every lesson card, hands-on tool and quiz question has a feedback box under it: tap Looks good, Needs a fix, or Technically wrong, and add a note. Notes save on this phone as you go. When you're done, tap Send feedback at the top."))
+    : h("div", { class: "hero" }, h("div", { class: "eyebrow" }, "Oil field instrumentation · 11 modules"), h("h1", {}, "Become an instrument tech, one loop at a time"),
       h("p", {}, "Each module is a short lesson, a hands-on tool to play with, and an 8-question quiz. When you finish a quiz, send your results back to your trainer from the results screen.")),
     ART.m1?.[1] ? fig(ART.m1[1]) : "",
-    h("div", { class: "namebox" }, h("label", { for: "nm" }, "Your name"), nameIn, h("div", { class: "small muted" }, "Your name goes on your quiz results so your trainer knows who sent them.")),
-    h("div", { class: "overall" }, h("span", { class: "eyebrow" }, `${passed} of ${MODULES.length} passed`), h("div", { class: "meter" }, h("i", { style: `width:${passed / MODULES.length * 100}%` }))),
+    h("div", { class: "namebox" }, h("label", { for: "nm" }, "Your name"), nameIn, h("div", { class: "small muted" }, REVIEW() ? "Your name goes on your feedback so the trainer knows who sent it." : "Your name goes on your quiz results so your trainer knows who sent them.")),
+    REVIEW() ? fbBox("course", "Whole course", "Overall: what's missing, what's wrong for the field, what would you add?") : "",
+    REVIEW() ? h("div", { class: "nav", style: "margin:0 0 18px" }, h("button", { class: "btn primary grow", onclick: () => go("feedback") }, `Send my feedback (${fbCount()})`)) : h("div", { class: "overall" }, h("span", { class: "eyebrow" }, `${passed} of ${MODULES.length} passed`), h("div", { class: "meter" }, h("i", { style: `width:${passed / MODULES.length * 100}%` }))),
     h("div", { class: "modlist" }, ...MODULES.map(m => {
       const b = S.best[m.id];
-      const chip = !b ? h("span", { class: "chip new" }, "Not started") : b.pct >= PASS ? h("span", { class: "chip ok" }, `Passed ${b.pct}%`) : h("span", { class: "chip bad" }, `Best ${b.pct}%`);
+      const nf = Object.keys(S.fb).filter(k => k.startsWith(m.id + ":")).length;
+      const chip = REVIEW() ? h("span", { class: "chip " + (nf ? "warn" : "new") }, nf ? `${nf} note${nf === 1 ? "" : "s"}` : "No notes yet")
+        : !b ? h("span", { class: "chip new" }, "Not started") : b.pct >= PASS ? h("span", { class: "chip ok" }, `Passed ${b.pct}%`) : h("span", { class: "chip bad" }, `Best ${b.pct}%`);
       return h("a", { class: "mod", href: "#" + m.id, onclick: (e) => { e.preventDefault(); go(m.id); } }, bubble(m), h("div", { class: "txt" }, h("div", { class: "t" }, m.title), h("div", { class: "s" }, m.sub), chip));
     })),
     h("p", { class: "foot" }, "Lessons are based on ", h("a", { href: "https://www.ibiblio.org/kuphaldt/socratic/sinst/", target: "_blank", rel: "noopener" }, "Lessons in Industrial Instrumentation"), " by Tony R. Kuphaldt (v2.33), used under the Creative Commons Attribution 4.0 license. Page numbers refer to the printed page numbers in that book. Always follow your site's procedures and your supervisor's direction in the field."));
@@ -8309,6 +8330,7 @@ function renderModule(m) {
       const spec = INTERACT[m.id]?.[stage], src = spec?.art || ART[m.id]?.[stage];
       const art = src ? fig(src) : null, tip = art ? fig(`<div class="tipbox" hidden></div>`) : null, ihost = spec ? h("div", { class: "ihost" }) : null;
       body.append(h("div", { class: "sheet" }, h("div", { class: "cn" }, `LESSON ${stage + 1} OF ${m.cards.length}`, spec ? h("span", { class: "cardtag" }, "INTERACTIVE") : ""), h("h2", {}, c.h), art, tip, ihost, h("div", { html: c.b })),
+        fbBox(`${m.id}:c${stage}`, `Lesson ${stage + 1}: ${c.h}`),
         h("div", { class: "nav" }, h("button", { class: "btn", disabled: stage === 0 ? "" : false, onclick: () => { stage--; show(); scrollTo(0, 0); } }, "Back"),
           h("button", { class: "btn primary grow", onclick: () => { stage++; show(); scrollTo(0, 0); } }, stage === m.cards.length - 1 ? "Try it yourself" : "Next")));
       if (spec) mountInteractive(m.id, stage, art, ihost);
@@ -8316,6 +8338,7 @@ function renderModule(m) {
     } else if (stage === m.cards.length) {
       const wroot = h("div", { class: "widget" });
       body.append(h("div", { class: "sheet" }, h("div", { class: "cn" }, "TRY IT"), h("h2", {}, W.title), h("p", { class: "muted" }, W.intro), wroot, h("div", { style: "height:10px" })),
+        fbBox(`${m.id}:t`, `Try it: ${W.title}`),
         h("div", { class: "nav" }, h("button", { class: "btn", onclick: () => { stage--; show(); scrollTo(0, 0); } }, "Back"), h("button", { class: "btn primary grow", onclick: () => { stage++; show(); scrollTo(0, 0); } }, "Take the quiz")));
       W.render(wroot);
     } else quizIntro(m, body, () => { stage = m.cards.length; show(); });
@@ -8332,6 +8355,10 @@ function quizIntro(m, body, back) {
     h("p", {}, `You need ${Math.ceil(m.quiz.length * PASS / 100)} right (${PASS}%) to pass. You'll see the answer and an explanation after each question. You can retake it as many times as you like, and your trainer sees every attempt you send.`),
     h("div", { class: "field" }, h("label", { for: "qnm" }, "Your name"), nameIn), h("div", { style: "height:12px" })),
     h("div", { class: "nav" }, h("button", { class: "btn", onclick: back }, "Back"), start));
+  if (REVIEW()) body.append(h("div", { class: "section" }, h("h2", {}, "Answer key (reviewer only)"), h("p", { class: "small muted", style: "margin:0" }, "Check each question, the right answer and the explanation. Flag anything wrong, misleading, or with a second answer that could also be right."),
+    ...m.quiz.map((q, j) => h("div", { class: "sheet akey" }, h("div", { class: "cn" }, `Q${j + 1}`), h("div", { class: "q", style: "margin-bottom:8px" }, q.q),
+      h("ol", { type: "A", class: "small" }, ...q.o.map((o, k) => h("li", { class: k === q.a ? "akright" : "" }, o, k === q.a ? "  ✓" : ""))), h("p", { class: "small muted" }, q.e),
+      fbBox(`${m.id}:q${j}`, `Quiz Q${j + 1}: ${q.q}`)))));
 }
 
 function runQuiz(m, body) {
@@ -8398,7 +8425,7 @@ const setLocalRows = (rows) => { try { localStorage.setItem("itt.tracker", JSON.
 function renderTracker() {
   const usingDb = DB && EDITOR;
   const msg = h("div", { "aria-live": "polite" });
-  const ta = h("textarea", { id: "paste", placeholder: "Paste one or more result texts here. Anything with a Code: ITT1… line works." });
+  const ta = h("textarea", { id: "paste", placeholder: "Paste result texts or reviewer feedback here. Anything with a Code: ITT1… or ITF1… line works." });
   const add = h("button", { class: "btn primary", type: "button" }, "Add results");
   const grid = h("div"), list = h("div", { class: "sublist" });
   app.append(topbar(h("button", { class: "linkbtn", onclick: () => go("home") }, "Course")),
@@ -8410,6 +8437,7 @@ function renderTracker() {
     h("div", { class: "section" }, h("h2", {}, "Add results"), ta, h("div", { class: "nav", style: "margin:0" }, add), msg),
     h("div", { class: "section" }, h("h2", {}, "Progress"), grid),
     h("div", { class: "section" }, h("h2", {}, "All attempts"), list),
+    fbSection(usingDb, msg),
     sendSection());
 
   const draw = () => {
@@ -8437,7 +8465,9 @@ function renderTracker() {
   };
 
   add.onclick = async () => {
+    const fcodes = [...new Set(ta.value.match(/ITF1\.[A-Za-z0-9_-]+/g) || [])];
     const codes = [...new Set(ta.value.match(/ITT1\.[A-Za-z0-9_-]+/g) || [])];
+    if (fcodes.length) { const n = await addFeedback(fcodes, usingDb); msg.className = "note " + (n ? "ok" : "warn"); msg.textContent = n ? `Added feedback from ${n} reviewer submission${n === 1 ? "" : "s"}. See Reviewer feedback below.` : "That feedback was already recorded."; ta.value = ""; if (!codes.length) return; }
     if (!codes.length) { msg.className = "note bad"; msg.textContent = "No result codes found. Paste the whole text, including the line that starts with Code: ITT1."; return; }
     let added = 0, dup = 0, bad = 0;
     for (const c of codes) {
@@ -8463,8 +8493,10 @@ function renderTracker() {
 
 function sendSection() {
   const sec = h("div", { class: "section" }, h("h2", {}, "Send a module"));
-  if (!ARTIFACT_URL) { sec.append(h("div", { class: "note info" }, "Module links appear here once the course is published.")); return sec; }
-  sec.append(h("p", { class: "small muted", style: "margin:0" }, "Copy a message and text it to your trainee. Share the course with a public link first (Share menu) so they can open it without an account."));
+  sec.append(h("p", { class: "small muted", style: "margin:0" }, "Copy a message and text it. These links open with no sign-in."));
+  { const link = `${ARTIFACT_URL}#review`, text = `Could you review an instrument tech training course I'm building? Go through any modules you like. Every lesson and quiz question has a feedback box. When you're done, tap Send feedback and text it back to me: ${link}`, st = h("span", { class: "small muted" });
+    sec.append(h("div", { class: "linkrow revrow" }, h("div", { class: "bubble", "aria-hidden": "true" }, h("span", { class: "l" }, "REV"), h("span", { class: "n" }, "★")), h("div", { class: "txt" }, h("b", {}, "Reviewer link (experienced techs)"), h("br"), h("span", { class: "small muted" }, link), st),
+      h("button", { class: "btn small", type: "button", onclick: async () => { try { await navigator.clipboard.writeText(text); st.textContent = " · Copied"; } catch { st.textContent = " · Copy failed, long-press the link instead"; } } }, "Copy text"))); }
   MODULES.forEach(m => {
     const link = `${ARTIFACT_URL}#${m.id}`, text = `Instrument tech training, Module ${m.tag}: ${m.title}. Work through the lesson and quiz, then text me your results: ${link}`;
     const st = h("span", { class: "small muted" });
@@ -8472,6 +8504,94 @@ function sendSection() {
       h("button", { class: "btn small", type: "button", onclick: async () => { try { await navigator.clipboard.writeText(text); st.textContent = " · Copied"; } catch { st.textContent = " · Copy failed, long-press the link instead"; } } }, "Copy text")));
   });
   return sec;
+}
+
+
+/* ---------- reviewer feedback ---------- */
+const fbCount = () => Object.keys(S.fb || {}).length;
+const RATE = { ok: "Looks good", fix: "Needs a fix", wrong: "Technically wrong" };
+function keyLabel(k) {
+  if (k === "course") return "Whole course";
+  const [mid, part] = k.split(":"), m = modBy(mid); if (!m) return k;
+  const pre = `M${m.tag} ${m.title}`;
+  if (part === "t") return `${pre} · Try it: ${WIDGETS[m.widget]?.title || ""}`;
+  if (part[0] === "c") return `${pre} · Lesson ${+part.slice(1) + 1}: ${m.cards[+part.slice(1)]?.h || ""}`;
+  if (part[0] === "q") { const q = m.quiz[+part.slice(1)]; return `${pre} · Quiz Q${+part.slice(1) + 1}: ${q ? q.q.slice(0, 70) : ""}`; }
+  return pre;
+}
+const keyOrder = (k) => { if (k === "course") return -1; const [mid, part] = k.split(":"); const mi = MODULES.findIndex(m => m.id === mid); const o = part[0] === "c" ? +part.slice(1) : part === "t" ? 50 : 100 + +part.slice(1); return mi * 1000 + o; };
+function fbBox(key, label, placeholder) {
+  if (!REVIEW()) return "";
+  const cur = S.fb[key] || {}, stat = h("span", { class: "small muted", "aria-live": "polite" }, cur.r || cur.n ? "Saved on this phone" : "");
+  const note = h("textarea", { rows: 3, id: "fb-" + key.replace(/[^a-z0-9]/gi, "-"), placeholder: placeholder || "What should change? Anything wrong, unclear, or missing for the field?" }); note.value = cur.n || "";
+  const seg = h("div", { class: "seg fbseg" }); seg.dataset.r = cur.r || "";
+  const store = () => { const r = seg.dataset.r, n = note.value.trim(); if (!r && !n) delete S.fb[key]; else S.fb[key] = { r, n, t: Date.now() }; save(); stat.textContent = S.fb[key] ? "Saved on this phone" : ""; document.querySelectorAll(".revbar span").forEach(e => e.innerHTML = `<b>Reviewer mode</b> · ${fbCount()} note${fbCount() === 1 ? "" : "s"}`); };
+  Object.entries(RATE).forEach(([v, t]) => seg.append(h("button", { type: "button", class: "fb-" + v + (cur.r === v ? " sel" : ""), onclick: () => { seg.dataset.r = seg.dataset.r === v ? "" : v; [...seg.children].forEach(b => b.classList.toggle("sel", b.classList.contains("fb-" + seg.dataset.r))); store(); } }, t)));
+  note.addEventListener("input", store);
+  return h("div", { class: "fbbox" }, h("div", { class: "eyebrow" }, "Reviewer feedback"), h("div", { class: "small muted" }, label), seg, note, stat);
+}
+const makeFbCode = (o) => "ITF1." + b64e(JSON.stringify(o));
+function renderFeedback() {
+  const keys = Object.keys(S.fb).sort((a, b) => keyOrder(a) - keyOrder(b));
+  const nameIn = h("input", { type: "text", id: "fbnm", value: S.name, placeholder: "First and last name", autocomplete: "name" });
+  const out = h("div", { class: "stack" });
+  const build = () => {
+    out.innerHTML = "";
+    if (!keys.length) { out.append(h("div", { class: "note info" }, "No notes yet. Open a module and use the feedback box under any lesson, tool or quiz question.")); return; }
+    if (!S.name) { out.append(h("div", { class: "note warn" }, "Add your name above so the trainer knows who sent this.")); return; }
+    const when = new Date().toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+    const lines = keys.map(k => { const f = S.fb[k]; return `• ${keyLabel(k)}\n  ${f.r ? RATE[f.r].toUpperCase() : "NOTE"}${f.n ? ": " + f.n : ""}`; });
+    const counts = Object.keys(RATE).map(r => `${keys.filter(k => S.fb[k].r === r).length} ${RATE[r].toLowerCase()}`).join(", ");
+    const txt = `${COURSE} · REVIEWER FEEDBACK\nReviewer: ${S.name}\n${keys.length} notes (${counts}) · ${when}\n\n${lines.join("\n")}\n\nCode: ${makeFbCode({ v: 1, n: S.name, d: Math.round(Date.now() / 1000), f: keys.map(k => [k, S.fb[k].r || "", S.fb[k].n || ""]) })}`;
+    const pre = h("pre", { class: "report" }, txt), copied = h("div", { class: "small muted", "aria-live": "polite" });
+    const copy = h("button", { class: "btn primary grow", type: "button", onclick: async () => {
+      try { await navigator.clipboard.writeText(txt); copied.textContent = "Copied. Paste it into a text to the trainer."; }
+      catch { const sel = getSelection(), rg = document.createRange(); rg.selectNodeContents(pre); sel.removeAllRanges(); sel.addRange(rg); copied.textContent = "Selected. Use your phone's Copy, then paste it into a text to the trainer."; } } }, "Copy my feedback");
+    const sms = h("a", { class: "btn grow", href: `sms:${TRAINER_PHONE}?&body=${encodeURIComponent(txt)}` }, "Open in Messages");
+    out.append(h("div", { class: "nav", style: "margin:0;flex-wrap:wrap" }, copy, sms), copied, pre);
+  };
+  nameIn.addEventListener("input", () => { S.name = nameIn.value.trim(); save(); build(); });
+  let armed = false;
+  const clear = h("button", { class: "btn small", type: "button", onclick: () => { if (!armed) { armed = true; clear.textContent = "Tap again to clear all notes"; setTimeout(() => { armed = false; clear.textContent = "Clear my notes"; }, 4000); return; } S.fb = {}; save(); render(); } }, "Clear my notes");
+  app.append(topbar(h("button", { class: "linkbtn", onclick: () => go("home") }, "All modules")),
+    h("div", { class: "hero" }, h("div", { class: "eyebrow" }, "Reviewer"), h("h1", {}, "Send your feedback"), h("p", {}, `You have ${keys.length} note${keys.length === 1 ? "" : "s"}. Copy them and text them to the trainer. You can keep reviewing and send again later; the trainer's tracker skips anything already received.`)),
+    h("div", { class: "namebox" }, h("label", { for: "fbnm" }, "Your name"), nameIn), out,
+    keys.length ? h("div", { class: "section" }, h("h2", {}, "Your notes"), ...keys.map(k => h("div", { class: "sub" }, h("div", { class: "txt" }, h("b", {}, keyLabel(k)), h("br"), h("span", { class: "small" }, S.fb[k].n || "")), S.fb[k].r ? h("span", { class: "chip " + ({ ok: "ok", fix: "warn", wrong: "bad" })[S.fb[k].r] }, RATE[S.fb[k].r]) : "")), h("div", {}, clear)) : "");
+  build();
+}
+
+/* tracker side: store and show reviewer feedback */
+let FBROWS = [], fbUnsub = null;
+const localFb = () => { try { return JSON.parse(localStorage.getItem("itt.feedback")) || []; } catch { return []; } };
+async function addFeedback(codes, usingDb) {
+  let n = 0;
+  for (const c of codes) {
+    let o; try { o = JSON.parse(b64d(c.slice(5))); } catch { continue; } if (!o || !Array.isArray(o.f)) continue;
+    const id = "f" + hashStr(c); if (FBROWS.some(x => x._id === id)) continue;
+    const row = { name: String(o.n || "Reviewer").slice(0, 80), at: o.d || Math.round(Date.now() / 1000), notes: o.f.slice(0, 400).map(([k, r, t]) => ({ k: String(k), r: String(r || ""), n: String(t || "").slice(0, 2000) })) };
+    if (usingDb) { try { await DB.collection("feedback").doc(id).set(row); n++; } catch {} } else { FBROWS.push({ ...row, _id: id }); try { localStorage.setItem("itt.feedback", JSON.stringify(FBROWS)); } catch {} n++; }
+  }
+  if (!usingDb) drawFb();
+  return n;
+}
+let fbHost = null;
+function fbSection(usingDb, msg) {
+  fbHost = h("div", { class: "stack" });
+  if (fbUnsub) { fbUnsub(); fbUnsub = null; }
+  if (usingDb) fbUnsub = DB.collection("feedback").onSnapshot((snap) => { FBROWS = snap.docs.map(d => ({ ...d.data(), _id: d.id })); drawFb(); }, () => {});
+  else FBROWS = localFb();
+  setTimeout(drawFb, 0);
+  return h("div", { class: "section" }, h("h2", {}, "Reviewer feedback"), fbHost);
+}
+function drawFb() {
+  if (!fbHost || !document.body.contains(fbHost)) return; fbHost.innerHTML = "";
+  if (!FBROWS.length) { fbHost.append(h("div", { class: "note info" }, "No reviewer feedback yet. Send an experienced tech the reviewer link below. When they text back their feedback, paste it in the box above.")); return; }
+  [...FBROWS].sort((a, b) => b.at - a.at).forEach(fr => {
+    const notes = [...fr.notes].sort((a, b) => keyOrder(a.k) - keyOrder(b.k));
+    const bad = notes.filter(x => x.r === "wrong").length, fix = notes.filter(x => x.r === "fix").length;
+    fbHost.append(h("details", { class: "sheet fbsub" }, h("summary", {}, h("b", {}, fr.name), ` · ${notes.length} notes · ${new Date(fr.at * 1000).toLocaleDateString([], { month: "short", day: "numeric" })}`, bad ? h("span", { class: "chip bad", style: "margin-left:8px" }, `${bad} wrong`) : "", fix ? h("span", { class: "chip warn", style: "margin-left:6px" }, `${fix} to fix`) : ""),
+      ...notes.map(x => h("div", { class: "sub" }, h("div", { class: "txt" }, h("b", { class: "small" }, keyLabel(x.k)), h("br"), h("span", {}, x.n || "")), x.r ? h("span", { class: "chip " + ({ ok: "ok", fix: "warn", wrong: "bad" })[x.r] }, RATE[x.r]) : ""))));
+  });
 }
 
 render();
