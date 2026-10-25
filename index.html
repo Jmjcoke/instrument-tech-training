@@ -1,0 +1,1008 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Instrument Tech Fundamentals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+/* Layout: single-column field manual. Each module is a numbered "loop" with an ISA-style bubble; lessons step card by card like a checklist. */
+:root{
+  --bg:#EEF1EF; --surface:#FFFFFF; --sunk:#E3E8E6; --ink:#172024; --muted:#56646A; --line:#CCD4D1;
+  --accent:#0E5C6B; --accent-ink:#FFFFFF; --accent-soft:#D6E9EC;
+  --tag:#E2A200; --tag-ink:#1B1600;
+  --ok:#24704A; --ok-soft:#DCEFE3; --bad:#A93C29; --bad-soft:#F6E0DB; --warn:#8A5A00; --warn-soft:#F7ECCF;
+  --display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111719; --surface:#1A2225; --sunk:#232D31; --ink:#E6ECEA; --muted:#98A6AA; --line:#2F3B3F;
+  --accent:#62B9C9; --accent-ink:#0B1A1D; --accent-soft:#1D3A40;
+  --tag:#F0B429; --tag-ink:#1B1600;
+  --ok:#5CC48A; --ok-soft:#173326; --bad:#F0806A; --bad-soft:#3A1F1A; --warn:#F0C060; --warn-soft:#352A12;
+  color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#111719; --surface:#1A2225; --sunk:#232D31; --ink:#E6ECEA; --muted:#98A6AA; --line:#2F3B3F;
+  --accent:#62B9C9; --accent-ink:#0B1A1D; --accent-soft:#1D3A40;
+  --tag:#F0B429; --tag-ink:#1B1600;
+  --ok:#5CC48A; --ok-soft:#173326; --bad:#F0806A; --bad-soft:#3A1F1A; --warn:#F0C060; --warn-soft:#352A12;
+  color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55;-webkit-text-size-adjust:100%}
+.wrap{max-width:680px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 48px}
+h1,h2,h3{font-family:var(--display);font-weight:700;line-height:1.1;text-wrap:balance;margin:0;letter-spacing:.01em}
+h1{font-size:2.3rem}h2{font-size:1.7rem}h3{font-size:1.3rem}
+p{margin:0 0 .8em}ul,ol{margin:0 0 .8em;padding-left:1.25em}li{margin-bottom:.35em}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--tag);outline-offset:2px}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--mono);font-size:.86rem;line-height:1.7;background:var(--sunk);padding:10px 12px;border-radius:8px;overflow-wrap:anywhere}
+.formula{font-family:var(--mono);font-weight:700;font-size:1rem;background:var(--accent-soft);color:var(--ink);padding:10px 12px;border-radius:8px;text-align:center;overflow-wrap:anywhere}
+.muted{color:var(--muted)}
+.small{font-size:.88rem}
+
+/* top bar */
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:6px 14px;border-bottom:2px solid var(--ink);margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+.brand b{font-family:var(--display);font-size:1.15rem;letter-spacing:.04em;text-transform:uppercase}
+.brand .dot{width:12px;height:12px;border-radius:50%;background:var(--tag);box-shadow:0 0 0 3px var(--ink) inset}
+.linkbtn{background:none;border:0;padding:6px 0;color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+/* ISA bubble */
+.bubble{flex:none;width:58px;height:58px;border-radius:50%;border:2.5px solid var(--ink);display:grid;place-items:center;align-content:center;background:var(--surface);font-family:var(--mono);line-height:1}
+.bubble .l{font-size:.62rem;font-weight:700;letter-spacing:.04em}
+.bubble .n{font-size:1.05rem;font-weight:700;margin-top:3px}
+.bubble.done{border-color:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)}
+.bubble.big{width:76px;height:76px}.bubble.big .l{font-size:.75rem}.bubble.big .n{font-size:1.4rem}
+
+/* home */
+.hero{display:grid;gap:10px;margin-bottom:22px}
+.hero p{color:var(--muted);max-width:56ch}
+.namebox{display:grid;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:22px}
+label{font-weight:600;font-size:.95rem}
+input[type=text],input[type=number],select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;width:100%}
+textarea{min-height:120px;font-family:var(--mono);font-size:.85rem}
+.overall{display:flex;align-items:center;gap:12px;margin:-6px 0 18px}
+.meter{flex:1;height:10px;border-radius:5px;background:var(--sunk);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--ok);border-radius:5px;transition:width .4s}
+.modlist{display:grid;gap:0;border-top:1px solid var(--line)}
+.mod{display:flex;gap:14px;align-items:center;padding:14px 4px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink)}
+.mod:hover .t{color:var(--accent)}
+.mod .txt{flex:1;min-width:0}
+.mod .t{font-family:var(--display);font-weight:700;font-size:1.3rem;line-height:1.15}
+.mod .s{color:var(--muted);font-size:.92rem}
+.chip{display:inline-block;font-family:var(--mono);font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:99px;white-space:nowrap}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}.chip.bad{background:var(--bad-soft);color:var(--bad)}.chip.new{background:var(--sunk);color:var(--muted)}.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.foot{margin-top:28px;font-size:.85rem;color:var(--muted)}
+
+/* module */
+.mhead{display:flex;gap:14px;align-items:center;margin-bottom:6px}
+.mhead .txt{min-width:0}
+.book{font-size:.88rem;color:var(--muted);margin:6px 0 16px;padding:8px 12px;border-left:4px solid var(--tag);background:var(--surface)}
+.steps{display:flex;gap:4px;margin:0 0 16px}
+.steps i{flex:1;height:6px;border-radius:3px;background:var(--sunk)}
+.steps i.on{background:var(--accent)}.steps i.cur{background:var(--tag)}
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 18px 8px;min-width:0}
+.sheet h2{margin-bottom:12px}
+.sheet .cn{font-family:var(--mono);font-size:.75rem;color:var(--muted);margin-bottom:6px;letter-spacing:.08em}
+.nav{display:flex;gap:10px;margin-top:14px}
+.btn{appearance:none;border:2px solid var(--ink);background:var(--surface);color:var(--ink);font-weight:700;font-size:1rem;padding:12px 18px;border-radius:8px;cursor:pointer;min-height:48px;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.grow{flex:1}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.small{min-height:38px;padding:6px 12px;font-size:.9rem}
+
+/* widget */
+.widget{display:grid;gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.row>*{flex:1 1 140px;min-width:0}
+.field{display:grid;gap:4px}
+.field span{font-size:.85rem;color:var(--muted);font-weight:600}
+input[type=range]{width:100%;accent-color:var(--accent);height:32px}
+.readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.ro{background:var(--sunk);border-radius:8px;padding:10px 12px}
+.ro small{display:block;font-size:.72rem;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ro b{font-family:var(--mono);font-size:1.3rem;font-variant-numeric:tabular-nums}
+.note{padding:10px 12px;border-radius:8px;font-size:.95rem}
+.note.ok{background:var(--ok-soft);color:var(--ink);border-left:4px solid var(--ok)}
+.note.bad{background:var(--bad-soft);color:var(--ink);border-left:4px solid var(--bad)}
+.note.warn{background:var(--warn-soft);color:var(--ink);border-left:4px solid var(--warn)}
+.note.info{background:var(--accent-soft);color:var(--ink);border-left:4px solid var(--accent)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1 1 auto;border:1.5px solid var(--line);background:var(--bg);padding:8px 10px;border-radius:8px;font-weight:600;cursor:pointer;min-height:40px}
+.seg button.sel{border-color:var(--accent);background:var(--accent-soft)}
+.seg button.right{border-color:var(--ok);background:var(--ok-soft)}
+.seg button.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.sortitem{display:grid;gap:6px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.sortitem:last-child{border-bottom:0}
+.sortitem .nm{font-weight:600}
+.tagbreak{display:flex;flex-wrap:wrap;gap:8px}
+.tagbreak div{background:var(--sunk);border-radius:8px;padding:8px 10px;min-width:0}
+.tagbreak b{font-family:var(--mono);font-size:1.2rem;color:var(--accent);margin-right:6px}
+.orderlist{display:grid;gap:8px}
+.orderlist button{text-align:left;border:1.5px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 12px;cursor:pointer;font-weight:500;display:flex;gap:10px;align-items:center;min-height:48px}
+.orderlist button .k{font-family:var(--mono);font-weight:700;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--sunk);flex:none;font-size:.8rem}
+.orderlist button.done{border-color:var(--ok);background:var(--ok-soft)}
+.orderlist button.done .k{background:var(--ok);color:var(--surface)}
+.orderlist button.shake{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.caltable{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.92rem}
+.caltable th{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:4px}
+.caltable td{padding:4px;border-top:1px solid var(--line)}
+.caltable input{padding:6px 8px;font-family:var(--mono);font-size:16px;min-width:0;width:100%}
+.tablewrap{overflow-x:auto}
+canvas{width:100%;display:block;background:var(--bg);border-radius:8px;border:1px solid var(--line)}
+.tank{display:flex;gap:14px;align-items:flex-end}
+.tank svg{flex:none}
+
+/* quiz */
+.q{font-size:1.15rem;font-weight:600;margin-bottom:14px;line-height:1.35}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:2px solid var(--line);background:var(--bg);border-radius:10px;padding:12px 14px;cursor:pointer;font-size:1rem;display:flex;gap:12px;align-items:flex-start;min-height:52px}
+.opt .k{font-family:var(--mono);font-weight:700;color:var(--muted);flex:none}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt.right{border-color:var(--ok);background:var(--ok-soft)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.opt:disabled{cursor:default}
+.fb{margin-top:12px}
+.qcount{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+
+/* results */
+.score{display:flex;gap:16px;align-items:center;margin-bottom:14px}
+.ring{flex:none;width:96px;height:96px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:1.5rem}
+.report{white-space:pre-wrap;font-family:var(--mono);font-size:.8rem;background:var(--sunk);border-radius:8px;padding:12px;user-select:all;-webkit-user-select:all;overflow-wrap:anywhere;margin:0}
+.stack{display:grid;gap:10px}
+.missed{display:grid;gap:8px;margin-top:6px}
+.missed div{background:var(--bg);border-radius:8px;padding:10px 12px;font-size:.93rem}
+
+/* tracker */
+.grid{border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.85rem;min-width:100%}
+.grid th,.grid td{padding:6px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+.grid th:first-child,.grid td:first-child{text-align:left;position:sticky;left:0;background:var(--surface)}
+.grid th{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.cell{display:inline-block;min-width:44px;padding:3px 6px;border-radius:6px;font-family:var(--mono);font-weight:700;font-size:.78rem}
+.cell.ok{background:var(--ok-soft);color:var(--ok)}.cell.bad{background:var(--bad-soft);color:var(--bad)}.cell.none{color:var(--line)}
+.sublist{display:grid;gap:0}
+.sub{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.sub .txt{flex:1;min-width:0}
+.linkrow{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.linkrow .txt{flex:1;min-width:0;overflow-wrap:anywhere}
+.section{margin-top:26px;display:grid;gap:10px;grid-template-columns:minmax(0,1fr)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app" class="wrap"></div>
+<script>
+const MODULES = [
+{
+  id: "m1", tag: "01", code: "INTRO", title: "What an Instrument Tech Does",
+  sub: "Measure, decide, act: the loop behind every process.",
+  ch: "Ch. 6, Introduction to Industrial Instrumentation", pages: "497–530",
+  cards: [
+    { h: "The job in one sentence", b: `<p>An instrument tech keeps the measuring and controlling equipment of a process working: the devices that sense pressure, level, temperature and flow, and the valves and controls that act on them.</p><p>On an oil field that means wellpads, separators, compressors, pipelines and tank farms. If an operator can't trust what a gauge or screen says, they can't run the plant safely. Your job is to make those numbers true.</p>` },
+    { h: "Every control loop has three jobs", b: `<p>Kuphaldt opens the field with a boiler level example. Every automatic loop does three things:</p><ul><li><b>Measure.</b> A <b>sensor</b> and <b>transmitter</b> read the process. This is the <b>process variable (PV)</b>.</li><li><b>Decide.</b> A <b>controller</b> compares the PV to the <b>setpoint (SP)</b>, the value we want.</li><li><b>Act.</b> The controller drives a <b>final control element</b>, usually a control valve, through its <b>output</b>. The output is also called the manipulated variable.</li></ul><p>The difference between PV and SP is the <b>error</b>. The controller's whole purpose is to drive error toward zero.</p>` },
+    { h: "Example: boiler water level", b: `<p>Water in a steam drum must stay at a steady level. Too low and the boiler tubes overheat. Too high and water carries over into the steam.</p><p>A <b>level transmitter (LT)</b> measures the drum level. A <b>level controller (LIC)</b> compares it to setpoint. It then opens or closes a <b>level valve (LV)</b> on the feedwater line. Water boils off, level drops, and the valve opens a little more. That cycle runs nonstop, thousands of times a day, on its own.</p>` },
+    { h: "Signals: how instruments talk", b: `<p>Instruments send their readings as standard signals:</p><ul><li><b>Pneumatic:</b> 3 to 15 PSI air pressure. It's older but still common on valves.</li><li><b>Analog electronic:</b> 4 to 20 mA DC current. This is the workhorse of the industry.</li><li><b>Digital:</b> HART, FOUNDATION Fieldbus, wireless and Modbus.</li></ul><p>In each analog range the bottom value means 0% and the top means 100%. Zero percent is 4 mA, not 0 mA. That "live zero" lets you tell a real 0% reading apart from a broken wire, which reads 0 mA.</p>` },
+    { h: "Switches vs. transmitters", b: `<p>A <b>transmitter</b> reports a continuous value, like "42.6% level." A <b>switch</b> reports only on/off. It changes state when a value crosses a trip point, like "pressure is above 850 PSI."</p><p>Switches often feed alarms and shutdowns. A high-high pressure switch (PSHH) might close a shutdown valve. Shutdown devices protect people and equipment, so they get tested on a schedule and are never bypassed without authorization.</p>` },
+    { h: "What your days actually look like", b: `<ul><li>Calibrating transmitters and documenting as-found and as-left readings</li><li>Troubleshooting a loop when an operator says "that reading looks wrong"</li><li>Loop checks: proving a field device shows up correctly in the control system</li><li>Stroking and repairing control valves</li><li>Testing shutdown and safety devices</li><li>Reading P&amp;IDs and loop drawings, and keeping them up to date</li><li>Working under permits, lockout/tagout and gas testing every single time</li></ul><p>The book's advice applies here: <b>learn principles, not procedures.</b> Procedures change from site to site. Physics doesn't.</p>` }
+  ],
+  widget: "sortLoop",
+  quiz: [
+    { q: "In a control loop, what is the setpoint (SP)?", o: ["The value the process is actually at", "The value we want the process to be at", "The controller's output to the valve", "The maximum range of the transmitter"], a: 1, e: "SP is the target. PV is the actual measured value. The controller works to make PV equal SP." },
+    { q: "Which device usually does the \"act\" job in a loop?", o: ["Transmitter", "Controller", "Control valve", "Indicator"], a: 2, e: "The final control element, most often a control valve, is what physically changes the process." },
+    { q: "A 4–20 mA transmitter reads 0 mA. What does that most likely tell you?", o: ["The process is at 0%", "The process is at 100%", "There's a fault, such as an open wire or no power", "The transmitter is in HART mode"], a: 2, e: "0% is 4 mA. A reading of 0 mA is below the live zero, so it points to a broken circuit or a dead device." },
+    { q: "The difference between PV and SP is called:", o: ["Span", "Error", "Offset range", "Bias"], a: 1, e: "Error = PV − SP (or SP − PV, depending on convention). The controller acts to reduce it." },
+    { q: "What is the standard pneumatic signal range?", o: ["0–10 PSI", "3–15 PSI", "4–20 PSI", "0–100 PSI"], a: 1, e: "3 to 15 PSI is the classic pneumatic standard. Like 4–20 mA, it has a live zero." },
+    { q: "What's the key difference between a switch and a transmitter?", o: ["Switches are always pneumatic", "A switch gives on/off at a trip point; a transmitter gives a continuous value", "Transmitters can only measure pressure", "Switches are more accurate"], a: 1, e: "A switch is discrete (two states). A transmitter is continuous (anywhere from 0 to 100%)." },
+    { q: "In the boiler example, what does the LIC do?", o: ["Measures the drum level", "Compares level to setpoint and drives the valve", "Opens the safety relief valve", "Indicates steam flow"], a: 1, e: "The LIC is the Level Indicating Controller, the \"decide\" part of the loop." },
+    { q: "Why does Kuphaldt stress \"learn principles, not procedures\"?", o: ["Procedures are illegal in the field", "Principles let you solve problems no procedure covers", "Procedures are always wrong", "It saves paperwork"], a: 1, e: "Real faults rarely match a checklist exactly. Understanding how things work lets you reason through new problems." }
+  ]
+},
+{
+  id: "m2", tag: "02", code: "ELEC", title: "Electricity Basics",
+  sub: "Voltage, current, resistance, and finding faults.",
+  ch: "Ch. 4, DC Electricity", pages: "291–330",
+  cards: [
+    { h: "Voltage: electrical push", b: `<p><b>Voltage (V)</b> is the push that moves electric charge. It's like pressure in a pipe. Voltage is <b>always measured between two points</b>, so your meter needs two leads touching two places.</p><p>Most instrument loops run on <b>24 VDC</b>. Plant power circuits run at 120 VAC, 480 VAC or higher. Know which one you're near before you put a lead down.</p>` },
+    { h: "Current: the flow", b: `<p><b>Current (I)</b> is the flow of charge, measured in amps (A) or milliamps (mA). It's like flow rate in a pipe.</p><p>Current only flows in a <b>complete loop</b>. To measure it, the meter must be <b>in series</b>: you break the circuit and let the current flow through the meter. Putting a meter set to amps across a voltage source makes a short circuit. That blows the meter's fuse, or worse.</p>` },
+    { h: "Resistance and Ohm's Law", b: `<p><b>Resistance (R)</b>, in ohms (Ω), is opposition to current. It's like a restriction in a pipe.</p><p class="formula">V = I × R</p><p>If you know two of the three, you can find the third. A 250 Ω resistor carrying 20 mA (0.020 A) drops 0.020 × 250 = <b>5 volts</b>. You'll use that exact fact on 4–20 mA loops all the time.</p><p><b>Power</b> is P = I × V, in watts. It tells you how much heat a part must handle.</p>` },
+    { h: "Series vs. parallel", b: `<ul><li><b>Series</b> (one path): the <b>same current</b> flows through every part. Voltages add up to the supply. A 4–20 mA loop is a series circuit, so the current is identical everywhere in it.</li><li><b>Parallel</b> (several paths): every branch has the <b>same voltage</b>. Currents add up to the total.</li></ul><p><b>Kirchhoff's Voltage Law:</b> the voltage drops around any closed loop add up to the source voltage. This is how you account for where your 24 volts went.</p>` },
+    { h: "Opens and shorts", b: `<p>Most electrical faults fall into two types:</p><ul><li><b>Open</b> (broken wire, loose terminal, blown fuse): current drops to <b>zero</b>. The <b>full supply voltage</b> appears across the break.</li><li><b>Short</b> (wires touching, water in a junction box): current goes <b>high</b>. There's nearly <b>zero volts</b> across the short.</li></ul><p>So if you measure 24 V across a terminal that should have 0.5 V, the break is right there.</p>` }
+  ],
+  widget: "ohms",
+  quiz: [
+    { q: "To measure current with a multimeter, you connect it:", o: ["Across the power supply", "In series, by breaking the circuit", "Between the wire and ground", "Anywhere, it doesn't matter"], a: 1, e: "Current has to flow through the meter, so the meter must be in series with the circuit." },
+    { q: "A 250 Ω resistor carries 12 mA. What voltage is across it?", o: ["3.0 V", "0.3 V", "30 V", "12 V"], a: 0, e: "V = I × R = 0.012 A × 250 Ω = 3.0 V." },
+    { q: "In a series circuit, what is the same through every component?", o: ["Voltage", "Current", "Resistance", "Power"], a: 1, e: "There's only one path, so the same current flows through everything. That's why 4–20 mA works." },
+    { q: "A wire breaks open in a 24 V loop. What do you measure across the break?", o: ["0 V", "About 24 V (full supply)", "12 V", "It depends on the current"], a: 1, e: "With no current flowing, nothing else drops voltage. The full supply appears across the open." },
+    { q: "Across a short circuit, voltage is:", o: ["High", "Near zero", "Equal to the supply", "Negative"], a: 1, e: "A short has nearly zero resistance, so V = I × R is nearly zero, even though current is high." },
+    { q: "What does Kirchhoff's Voltage Law say?", o: ["Current is the same everywhere", "Voltage drops around a loop add up to the source voltage", "Resistance doubles in parallel", "Power equals voltage squared"], a: 1, e: "Every volt the supply provides gets used up somewhere around the loop." },
+    { q: "Common supply voltage for instrument loops:", o: ["5 VDC", "24 VDC", "120 VAC", "480 VAC"], a: 1, e: "24 VDC is the standard for most transmitter loops." },
+    { q: "A 24 V source pushes current through 1,200 Ω. What's the current?", o: ["20 mA", "2 mA", "50 mA", "200 mA"], a: 0, e: "I = V / R = 24 / 1200 = 0.020 A = 20 mA." }
+  ]
+},
+{
+  id: "m3", tag: "03", code: "4-20", title: "The 4–20 mA Loop",
+  sub: "The signal you'll measure every day.",
+  ch: "Ch. 13, Analog Electronic Instrumentation · HART: Ch. 15.10", pages: "863–916, 1093–1110",
+  cards: [
+    { h: "Why use current instead of voltage?", b: `<p>A voltage signal loses some of itself to wire resistance on long cable runs. A <b>current</b> signal doesn't. In a series loop the same current flows everywhere, so every device reads the same signal no matter how long the wire is.</p><p>That's why 4–20 mA became the standard. It's simple, it tolerates noise, and it carries a live zero.</p>` },
+    { h: "2-wire (loop-powered) transmitters", b: `<p>Most field transmitters are <b>2-wire</b>. The same two wires carry both the power and the signal. A 24 VDC supply in the control room pushes current around the loop. The transmitter acts like a valve on that current, letting through just the right amount for its reading.</p><p>A <b>4-wire</b> transmitter has its own separate power, like 120 VAC, and produces the current itself. Mixing up the two types can short a supply.</p>` },
+    { h: "The 250 Ω resistor trick", b: `<p>Control systems often read the loop by measuring voltage across a <b>250 Ω</b> resistor:</p><ul><li>4 mA × 250 Ω = <b>1 V</b></li><li>20 mA × 250 Ω = <b>5 V</b></li></ul><p>So 4–20 mA becomes 1–5 V. If you see 3 V across that resistor, the loop is at 12 mA, which is 50%.</p>` },
+    { h: "Converting signal to reading", b: `<p>The range from 4 to 20 mA is <b>16 mA</b> wide. Use these formulas:</p><p class="formula">mA = 4 + 16 × (% ÷ 100)</p><p class="formula">PV = LRV + ((mA − 4) ÷ 16) × span</p><p>The <b>LRV</b> (lower range value) is the 0% point and the <b>URV</b> is the 100% point. <b>Span = URV − LRV.</b></p><p>Example: a transmitter ranged 0–200 PSI reads 16 mA. That's (16−4)/16 = 75%, so 150 PSI.</p>` },
+    { h: "Fault currents (NAMUR NE43)", b: `<p>Many smart transmitters drive the signal out of range on purpose when they detect a fault:</p><ul><li>Below about <b>3.6–3.8 mA</b>: downscale failure</li><li>Above about <b>20.5–21 mA</b>: upscale failure</li></ul><p>Which way a transmitter fails is configurable. Know how yours is set, because it decides whether a fault looks like "empty tank" or "overflowing tank" to the control system.</p>` },
+    { h: "HART: digital riding on analog", b: `<p><b>HART</b> layers a small digital tone on top of the 4–20 mA signal. The tone doesn't change the average current. With a HART communicator or a calibrator you can read the tag, range, sensor value and diagnostics, and you can trim the device without breaking the loop.</p><p>HART needs at least about <b>250 Ω</b> of resistance in the loop to work. If your communicator can't find the device, check for that resistance first.</p>` }
+  ],
+  widget: "loopCalc",
+  quiz: [
+    { q: "What current does a 4–20 mA transmitter send at 50%?", o: ["10 mA", "12 mA", "8 mA", "14 mA"], a: 1, e: "4 + 16 × 0.5 = 12 mA." },
+    { q: "Voltage across a 250 Ω resistor at 20 mA:", o: ["2.5 V", "4 V", "5 V", "20 V"], a: 2, e: "0.020 A × 250 Ω = 5 V." },
+    { q: "A transmitter ranged 0–200 PSI reads 8 mA. What's the pressure?", o: ["25 PSI", "50 PSI", "80 PSI", "40 PSI"], a: 1, e: "(8−4)/16 = 25%. 25% of 200 PSI is 50 PSI." },
+    { q: "What does a 2-wire (loop-powered) transmitter do?", o: ["Uses separate power and signal wires", "Gets power and sends its signal on the same two wires", "Sends voltage, not current", "Needs no power supply"], a: 1, e: "Loop-powered means the loop current both powers the device and carries the signal." },
+    { q: "Why is current better than voltage for long cable runs?", o: ["Current is cheaper", "Wire resistance doesn't change the current in a series loop", "Voltage can't travel far", "Current doesn't need wires"], a: 1, e: "Every device in a series loop sees the same current, regardless of wire resistance (within the supply's limits)." },
+    { q: "A transmitter outputs 3.6 mA. Most likely:", o: ["Exactly 0% process", "The device is signaling a downscale fault", "HART is active", "Perfect calibration"], a: 1, e: "Below 4 mA is under range. Many devices go to about 3.6 mA on purpose to flag a failure." },
+    { q: "What does HART need in the loop to communicate?", o: ["At least about 250 Ω of resistance", "A fiber optic cable", "A 120 VAC supply", "Zero resistance"], a: 0, e: "The HART tone needs some resistance to develop a readable voltage. About 250 Ω is the usual minimum." },
+    { q: "If LRV = 50 °F and URV = 250 °F, the span is:", o: ["250 °F", "300 °F", "200 °F", "150 °F"], a: 2, e: "Span = URV − LRV = 250 − 50 = 200 °F." }
+  ]
+},
+{
+  id: "m4", tag: "04", code: "PHYS", title: "Pressure and Fluid Physics",
+  sub: "Units, head pressure, and gas laws.",
+  ch: "Ch. 2.11, Fluid Mechanics", pages: "170–199 (conversions: 66)",
+  cards: [
+    { h: "Pressure is force over area", b: `<p class="formula">P = F ÷ A</p><p>In the oil field you'll see <b>PSI</b> (pounds per square inch), <b>inches of water column (″WC or inH₂O)</b> for small pressures, plus bar and kPa on metric equipment.</p><p>Handy conversions:</p><ul><li>1 PSI = <b>27.68 inH₂O</b></li><li>1 PSI = <b>2.31 feet of water</b></li><li>1 atmosphere = <b>14.7 PSI</b></li><li>1 bar ≈ 14.5 PSI</li></ul>` },
+    { h: "Gauge vs. absolute", b: `<ul><li><b>Gauge pressure (PSIG)</b> is measured relative to the air around you. Open to air, a gauge reads 0.</li><li><b>Absolute pressure (PSIA)</b> is measured from a perfect vacuum.</li></ul><p class="formula">PSIA = PSIG + 14.7</p><p><b>Vacuum</b> is anything below atmospheric pressure. Check the range sheet to see which kind of transmitter you're holding. Mix them up and you'll be off by 14.7 PSI.</p>` },
+    { h: "Hydrostatic pressure (head)", b: `<p>A column of liquid presses down because of its weight. The deeper you go, the higher the pressure. <b>The shape and width of the tank don't matter, only the height.</b></p><p class="formula">P (inH₂O) = height (in) × SG</p><p><b>Specific gravity (SG)</b> compares a liquid's density to water. Water = 1.0. Crude oil is often around 0.8–0.9. Produced water can run 1.02–1.1.</p><p>This one idea is the basis of most level measurement, so know it cold.</p>` },
+    { h: "Pascal's Principle", b: `<p>Pressure applied to a confined fluid spreads <b>equally in all directions</b>. That's why a pressure gauge reads the same whether you mount it on the top, side or bottom of a pipe (ignoring the small head of the fluid itself).</p><p>It's also how hydraulic jacks and many valve actuators multiply force.</p>` },
+    { h: "Gas laws: always use absolute", b: `<p>Gases compress, and liquids barely do. The ideal gas law:</p><p class="formula">PV = nRT</p><p>For practical work: at a constant temperature, doubling the <b>absolute</b> pressure halves the volume (Boyle's Law). Heating a sealed container raises its pressure.</p><p>Gas law math only works in <b>absolute</b> units: PSIA, and degrees Rankine or Kelvin. Plugging in PSIG or °F gives the wrong answer. This matters for gas flow measurement later on.</p>` }
+  ],
+  widget: "head",
+  quiz: [
+    { q: "How many inches of water column equal 1 PSI?", o: ["14.7", "27.68", "2.31", "33.9"], a: 1, e: "1 PSI ≈ 27.68 inH₂O. (2.31 is feet of water per PSI.)" },
+    { q: "A gauge reads 100 PSIG. What's the absolute pressure?", o: ["85.3 PSIA", "100 PSIA", "114.7 PSIA", "147 PSIA"], a: 2, e: "PSIA = PSIG + 14.7 = 114.7 PSIA." },
+    { q: "Hydrostatic pressure at the bottom of a tank depends on:", o: ["Tank diameter", "Liquid height and density", "Tank volume", "Tank material"], a: 1, e: "Only height and density (SG) matter. A tall skinny tank and a short wide one at the same height and SG give the same pressure." },
+    { q: "100 inches of liquid with SG 0.85 gives about:", o: ["100 inH₂O", "85 inH₂O", "117.6 inH₂O", "8.5 inH₂O"], a: 1, e: "P = height × SG = 100 × 0.85 = 85 inH₂O." },
+    { q: "Why must gas law calculations use absolute pressure?", o: ["Gauge pressure is illegal", "The math is relative to zero pressure, a true vacuum", "Absolute is always smaller", "It doesn't matter"], a: 1, e: "Gas laws come from zero pressure and zero temperature. Gauge units start in the wrong place and give wrong answers." },
+    { q: "What is the specific gravity of water?", o: ["0.0", "1.0", "8.34", "62.4"], a: 1, e: "SG is defined relative to water, so water is 1.0. (8.34 lb/gal and 62.4 lb/ft³ are its densities.)" },
+    { q: "A pressure gauge open to the air reads:", o: ["14.7 PSIG", "0 PSIG", "0 PSIA", "−14.7 PSIG"], a: 1, e: "Gauge pressure is relative to the atmosphere, so open to air it reads 0." },
+    { q: "About how many feet of water make 1 PSI?", o: ["1.0 ft", "2.31 ft", "27.68 ft", "14.7 ft"], a: 1, e: "1 PSI ≈ 2.31 feet of water. That's handy for tank and well head estimates." }
+  ]
+},
+{
+  id: "m5", tag: "05", code: "DWG", title: "Reading Instrument Drawings",
+  sub: "P&IDs, loop sheets, and ISA tag letters.",
+  ch: "Ch. 7, Instrumentation Documents", pages: "531–562",
+  cards: [
+    { h: "Three drawings you'll use", b: `<ul><li><b>PFD (Process Flow Diagram):</b> the big picture. It shows major equipment and flows, with little instrumentation.</li><li><b>P&amp;ID (Piping and Instrument Diagram):</b> every pipe, valve and instrument, with tags, and how they connect. This is your road map.</li><li><b>Loop diagram (loop sheet):</b> one loop wire by wire. It shows terminals, junction boxes, cable numbers, cabinets and the device range. It's your troubleshooting map.</li></ul>` },
+    { h: "Instrument bubbles", b: `<p>On a P&amp;ID, instruments are circles ("bubbles") with a tag inside. The line through the middle tells you <b>where</b> the device lives:</p><ul><li><b>No line:</b> mounted in the field</li><li><b>Solid line:</b> on the main control panel, where the operator can reach it</li><li><b>Dashed line:</b> behind a panel or in a rack, not normally seen</li><li><b>Circle inside a square:</b> a shared display or control function, like a DCS screen</li><li><b>Diamond in a square:</b> a PLC function. <b>Hexagon:</b> a computer function.</li></ul>` },
+    { h: "Reading a tag: the first letter", b: `<p>The <b>first letter</b> is the measured variable:</p><p class="mono">P = pressure · T = temperature · L = level · F = flow · A = analysis · S = speed · W = weight · Z = position · H = hand (manual)</p><p>An optional modifier can follow the first letter: <b>D</b> = differential (PDT), <b>Q</b> = totalize (FQI).</p><p>The number is the <b>loop number</b>. Every device in loop 101 shares "101."</p>` },
+    { h: "Reading a tag: the next letters", b: `<p>The <b>following letters</b> tell what the device does:</p><p class="mono">T = transmit · I = indicate · C = control · V = valve · E = primary element · S = switch · A = alarm · Y = relay/convert (like an I/P) · G = glass/gauge · R = record</p><p><b>H / L</b> mean high and low. <b>HH / LL</b> mean high-high and low-low, usually shutdown levels.</p><p>Examples: <b>PIT-101</b> pressure indicating transmitter. <b>LIC-205</b> level indicating controller. <b>FV-301</b> flow valve. <b>TE-12</b> temperature element. <b>PSHH-40</b> pressure switch high-high.</p>` },
+    { h: "Signal lines", b: `<ul><li><b>Thick solid line:</b> process piping</li><li><b>Dashed line:</b> electrical signal (like 4–20 mA)</li><li><b>Line with double slashes (//):</b> pneumatic signal (instrument air)</li><li><b>Line with small circles:</b> data link or software connection</li></ul><p>Standards vary a bit between companies, so check the <b>legend sheet</b> on your drawing set. And when you change something in the field, the drawing gets red-lined so the next tech isn't working from a lie.</p>` }
+  ],
+  widget: "tagDecoder",
+  quiz: [
+    { q: "Which drawing shows terminal numbers, junction boxes and cable numbers for one loop?", o: ["PFD", "P&ID", "Loop diagram", "Plot plan"], a: 2, e: "Loop diagrams detail a single loop's wiring from field device to control system." },
+    { q: "What does \"LIT-205\" mean?", o: ["Level Indicating Transmitter, loop 205", "Line Isolation Tag 205", "Level Interlock Trip 205", "Low Indication Temperature 205"], a: 0, e: "L = level, I = indicate, T = transmit. 205 is the loop number." },
+    { q: "A bubble with no line through it is:", o: ["On the main control panel", "Behind the panel", "Field-mounted", "A computer function"], a: 2, e: "No line means the device is out in the field." },
+    { q: "On a P&ID, a dashed line usually means:", o: ["Process piping", "Electrical signal", "Pneumatic signal", "Hydraulic line"], a: 1, e: "Dashed lines are electrical signals. Pneumatic lines have double slashes." },
+    { q: "\"PSHH\" means:", o: ["Pressure switch, high-high", "Pressure sensor, hand-held", "Pump speed, high-high", "Pressure safety heater"], a: 0, e: "P = pressure, S = switch, HH = high-high. It's typically a shutdown trip." },
+    { q: "In \"PDT,\" what does the D mean?", o: ["Digital", "Differential", "Display", "Drain"], a: 1, e: "D after the first letter modifies it to \"differential\": a differential pressure transmitter." },
+    { q: "A circle inside a square represents:", o: ["A field gauge", "A shared display/control function such as a DCS", "A relief valve", "A junction box"], a: 1, e: "That symbol is a function shared on a display or control system, like a DCS screen." },
+    { q: "You changed a device in the field. What happens to the drawing?", o: ["Nothing", "It gets red-lined and updated", "It's thrown away", "Only the PFD changes"], a: 1, e: "Drawings must match the field. Red-line your changes so they get updated." }
+  ]
+},
+{
+  id: "m6", tag: "06", code: "CONN", title: "Tubing, Fittings and Wiring",
+  sub: "Making connections that don't leak or lie.",
+  ch: "Ch. 8, Instrument Connections", pages: "563–651",
+  cards: [
+    { h: "Pipe threads (NPT)", b: `<p><b>NPT</b> (National Pipe Taper) threads are <b>tapered</b>. They seal by wedging tighter as you turn them, helped by thread sealant or PTFE tape.</p><ul><li>Wrap tape <b>clockwise</b> (the direction of the threads) and keep it off the first thread or two so it doesn't shred into the process.</li><li>Never put tape or sealant on <b>tube fitting</b> threads. Those threads don't do the sealing.</li></ul>` },
+    { h: "Compression tube fittings", b: `<p>Instrument tubing, usually <b>316 stainless steel</b>, connects with compression fittings. The nut drives <b>ferrules</b> that bite into the tube and seal against the fitting body.</p><p>For common sizes (1/4″ to 1″) the usual rule from the maker is: <b>finger-tight, then 1¼ turns</b> with a wrench. Small sizes (1/16″–3/16″) get ¾ turn. Use a <b>gap gauge</b> to check the make-up.</p><p><b>Never mix brands</b> of nuts, ferrules and bodies. They aren't designed to work together and may leak under pressure.</p>` },
+    { h: "Good tubing practice", b: `<ul><li>Cut square, then deburr the tube inside and out</li><li>Push the tube all the way in until it bottoms in the fitting</li><li>Bend with a proper bender. Don't kink or flatten it.</li><li>Support runs so vibration doesn't crack the tube at the fitting</li><li>Slope impulse lines to match the service: liquid lines slope down to the transmitter so gas bubbles rise away; gas lines slope up so liquid drains away</li></ul>` },
+    { h: "Signal wiring", b: `<p>4–20 mA signals run on <b>twisted, shielded pairs</b>. The twist cancels magnetic noise. The foil shield blocks electric noise.</p><p><b>Ground the shield at one end only</b>, normally the control room end. Grounding both ends lets current flow through the shield, a <b>ground loop</b>, which adds noise to the signal.</p><p>Keep instrument cable separated from power cables and VFD motor leads.</p>` },
+    { h: "Terminations and labels", b: `<ul><li>Use ferrules or proper lugs on stranded wire. No stray strands.</li><li>Tug-test every termination</li><li>Label wires to match the loop diagram</li><li>Watch <b>polarity</b>. On a 4–20 mA loop, + goes to +.</li><li>In hazardous areas, cable glands, conduit seals and enclosure covers are part of the safety protection. Close them up completely.</li></ul>` }
+  ],
+  widget: "fittingOrder",
+  quiz: [
+    { q: "How do NPT pipe threads seal?", o: ["With ferrules", "With the taper wedging, plus sealant or tape", "With an O-ring only", "They don't seal"], a: 1, e: "NPT threads are tapered. They wedge tight, and tape or dope fills the gaps." },
+    { q: "Common make-up for a 1/2″ compression tube fitting:", o: ["Finger-tight plus 1¼ turns", "As tight as possible", "Finger-tight only", "Finger-tight plus 5 turns"], a: 0, e: "For 1/4″–1″ sizes, the usual manufacturer rule is 1¼ turns past finger-tight. Check with a gap gauge." },
+    { q: "Should you put PTFE tape on compression fitting threads?", o: ["Yes, always", "No, the ferrules seal, not the threads", "Only on gas service", "Only on stainless"], a: 1, e: "Tube fitting threads only pull the nut. The ferrules make the seal." },
+    { q: "Why shouldn't you mix fitting brands?", o: ["It voids nothing", "Parts aren't designed to work together and may leak", "It's slower", "Colors don't match"], a: 1, e: "Ferrule shapes and tolerances differ between makers. Mixing them can cause leaks or blowouts." },
+    { q: "Where is an instrument cable shield normally grounded?", o: ["Both ends", "One end, usually the control room", "Neither end", "At every junction box"], a: 1, e: "Grounding one end avoids ground loops through the shield." },
+    { q: "Why are signal wire pairs twisted?", o: ["Looks neater", "To cancel magnetic noise pickup", "To make them stronger", "To increase current"], a: 1, e: "Twisting makes induced noise cancel between the two wires." },
+    { q: "A liquid-service impulse line should slope:", o: ["Up to the transmitter", "Down to the transmitter, so gas rises away", "Perfectly level", "It doesn't matter"], a: 1, e: "Sloping liquid lines down to the transmitter lets gas bubbles migrate back to the process instead of getting trapped." },
+    { q: "After cutting tubing, you should:", o: ["Install it right away", "Deburr inside and out", "Paint the end", "Heat the end"], a: 1, e: "Burrs keep the tube from seating and can shed metal into the instrument." }
+  ]
+}
+];
+MODULES.push(
+{
+  id: "m7", tag: "07", code: "CAL", title: "Calibration",
+  sub: "Making the reading match reality, and proving it.",
+  ch: "Ch. 18, Instrument Calibration", pages: "1255–1290",
+  cards: [
+    { h: "Calibration vs. ranging", b: `<p>These two get confused all the time:</p><ul><li><b>Calibration</b> means checking and adjusting the instrument so its output correctly matches a <b>known, applied input</b>. You need a reference standard, like a pressure source and a calibrator.</li><li><b>Ranging</b> means setting the LRV and URV: which input equals 4 mA and which equals 20 mA. On a smart transmitter you can re-range with a HART communicator and no applied input at all.</li></ul><p>Re-ranging doesn't fix a sensor that's reading wrong. Only a calibration (sensor trim) against a reference does that.</p>` },
+    { h: "Zero, span, and the error types", b: `<ul><li><b>Zero error:</b> every point is off by the same amount. The whole line shifts up or down.</li><li><b>Span error:</b> the error grows as you go up the range. The slope is wrong.</li><li><b>Linearity error:</b> the middle points are off even when both ends are right.</li><li><b>Hysteresis:</b> readings going up differ from readings coming down at the same input.</li></ul><p>On analog instruments, zero and span adjustments often interact. Set zero, set span, then recheck zero.</p>` },
+    { h: "The 5-point up/down check", b: `<p>The standard test applies <b>0, 25, 50, 75 and 100%</b> of range going up, then back down. Ideal outputs are <b>4, 8, 12, 16 and 20 mA</b>.</p><p class="formula">Error (% of span) = (actual mA − ideal mA) ÷ 16 × 100</p><p>Compare each error to the allowed tolerance, often ±0.25% to ±0.5% of span, or whatever your site specifies. Going both up and down catches hysteresis.</p>` },
+    { h: "As-found and as-left", b: `<p>Always record the readings <b>before</b> you touch anything (<b>as-found</b>), and again <b>after</b> adjustment (<b>as-left</b>).</p><p>As-found data shows how far the device drifted. It can trigger an investigation if a safety device was out of tolerance. If you skip it, that history is gone for good.</p>` },
+    { h: "Smart transmitter trims", b: `<p>A HART transmitter has two separate trims:</p><ul><li><b>Sensor trim</b> (lower/upper): teaches the digital reading to match the applied pressure</li><li><b>Output (D/A) trim</b>: makes the actual mA output match the digital value</li></ul><p>Then the <b>LRV/URV</b> setting decides what reading maps to 4 and 20 mA. <b>Damping</b> slows the response to smooth out noise. Too much damping hides real changes.</p>` },
+    { h: "Before you start", b: `<ul><li>Coordinate with operations. Is the loop in manual? Are trips bypassed under permit?</li><li>Isolate and depressurize safely: close the block valve, open the equalizer, vent</li><li>Use test equipment that's <b>more accurate</b> than the device (rule of thumb: 4:1) and inside its cal date, <b>traceable to NIST</b></li><li>Put everything back, leak check, and return the loop to the operator</li></ul>` }
+  ],
+  widget: "calCheck",
+  quiz: [
+    { q: "What's the difference between calibration and ranging?", o: ["None", "Calibration compares to a known input; ranging just sets LRV/URV", "Ranging needs a reference standard", "Calibration only applies to valves"], a: 1, e: "Ranging maps values to 4 and 20 mA. Calibration makes the device read correctly against a reference." },
+    { q: "Every test point reads 0.2 mA high. This is a:", o: ["Span error", "Zero error", "Hysteresis error", "Linearity error"], a: 1, e: "The same offset at every point is a zero shift." },
+    { q: "Ideal output at 75% of range:", o: ["12 mA", "15 mA", "16 mA", "18 mA"], a: 2, e: "4 + 16 × 0.75 = 16 mA." },
+    { q: "A point that should be 12.00 mA reads 12.08 mA. Error in % of span:", o: ["0.08%", "0.5%", "0.67%", "8%"], a: 1, e: "0.08 ÷ 16 × 100 = 0.5% of span." },
+    { q: "Why record as-found data?", o: ["It's optional", "It shows drift and whether the device was in tolerance before adjustment", "To make the report longer", "Only for new devices"], a: 1, e: "As-found data shows how the device was really performing in service." },
+    { q: "Readings going up differ from readings coming down. This is:", o: ["Zero error", "Span error", "Hysteresis", "Damping"], a: 2, e: "A difference between the rising and falling direction is hysteresis." },
+    { q: "Rule-of-thumb accuracy ratio for test equipment:", o: ["1:1", "2:1", "4:1", "100:1"], a: 2, e: "Your reference should be about 4× more accurate than the device under test." },
+    { q: "Re-ranging a smart transmitter from 0–100 to 0–150 PSI with a communicator:", o: ["Calibrates the sensor", "Changes which pressure equals 20 mA, without checking accuracy", "Is illegal", "Requires a deadweight tester"], a: 1, e: "Ranging changes the mapping. It doesn't prove the sensor reads correctly." }
+  ]
+},
+{
+  id: "m8", tag: "08", code: "P/L", title: "Pressure and Level Measurement",
+  sub: "DP transmitters, manifolds, and tank levels.",
+  ch: "Ch. 19, Pressure · Ch. 20, Level", pages: "1311–1406, 1407–1512",
+  cards: [
+    { h: "Pressure sensing elements", b: `<p>Mechanical gauges use a <b>Bourdon tube</b>, a curved tube that straightens out as pressure rises. You can also find bellows and diaphragms.</p><p>Electronic transmitters use a <b>diaphragm</b> with a capacitive, piezoresistive or resonant sensor behind it. Remote <b>diaphragm seals</b> with capillaries keep dirty, hot or corrosive fluids out of the transmitter.</p>` },
+    { h: "The DP transmitter", b: `<p>A <b>differential pressure (DP)</b> transmitter has a <b>High (H)</b> side and a <b>Low (L)</b> side. It measures H minus L.</p><p>One device measures a lot:</p><ul><li>Pressure (L side vented to air)</li><li>Level (hydrostatic head)</li><li>Flow (DP across an orifice plate)</li><li>Filter or strainer plugging (DP across it)</li></ul>` },
+    { h: "Manifolds: valve order matters", b: `<p>A <b>3-valve manifold</b> has two block valves and an equalizing valve between them. A 5-valve version adds vents.</p><p>A common sequence to <b>put it in service</b>: start with the equalizer <b>open</b>. Open the high block. Close the equalizer. Open the low block.</p><p>The point is to never let full process pressure hit one side of the sensor alone, and to never have both blocks <i>and</i> the equalizer open at once. That blows process fluid straight through the manifold and can drain a wet leg. <b>Always follow your site's procedure.</b></p>` },
+    { h: "Level by hydrostatic pressure", b: `<p>Most liquid levels are measured by head pressure: <b>P = height × SG</b>.</p><p>A transmitter for a 100″ tall range of oil (SG 0.85) needs a span of 85 inH₂O. If it's mounted <b>below</b> the lower tap, the liquid in the impulse line adds pressure even at 0% level. So the LRV is above zero.</p><p>On a <b>pressurized</b> vessel, the low side connects to the vapor space so the vessel pressure cancels out. That low-side line is either a <b>dry leg</b> (gas filled) or a <b>wet leg</b> (filled with liquid, which shifts the range negative).</p><p>Changes in SG cause errors. If the fluid gets heavier, the reading goes high.</p>` },
+    { h: "Other level technologies", b: `<ul><li><b>Sight glass:</b> the simple visual reference operators trust. Use it to sanity-check transmitters.</li><li><b>Float:</b> rides the surface. Common for switches.</li><li><b>Displacer:</b> a heavy cylinder that gets lighter as liquid rises (buoyancy, Archimedes). Good for <b>interface</b> level (oil on water).</li><li><b>Guided wave radar (GWR):</b> a pulse travels down a probe and reflects off the surface. It handles interfaces too and is very common in separators.</li><li><b>Non-contact radar and ultrasonic:</b> bounce a signal off the surface from above</li><li><b>Nuclear:</b> for nasty services. Needs licensed handling.</li></ul>` }
+  ],
+  widget: "dpLevel",
+  quiz: [
+    { q: "A DP transmitter measures:", o: ["High side plus low side", "High side minus low side", "Only the high side", "Absolute pressure"], a: 1, e: "DP = H − L." },
+    { q: "When putting a 3-valve manifold in service, the equalizer starts:", o: ["Closed", "Open", "Removed", "Half open"], a: 1, e: "Starting equalized protects the sensor from a one-sided pressure surge as you open the first block." },
+    { q: "What's dangerous about both blocks and the equalizer open together?", o: ["Nothing", "Process blows through the manifold and can drain a wet leg or damage things", "The display goes blank", "The transmitter changes range"], a: 1, e: "It creates a straight path from high to low side through the manifold." },
+    { q: "A 200″ water tank (SG 1.0). URV of a bottom-mounted DP level transmitter:", o: ["100 inH₂O", "200 inH₂O", "7.2 PSI exactly", "27.68 inH₂O"], a: 1, e: "200″ × 1.0 = 200 inH₂O." },
+    { q: "Which technology suits oil/water interface level well?", o: ["Bourdon tube", "Displacer or guided wave radar", "Sight glass only", "Thermocouple"], a: 1, e: "Displacers and GWR can both detect the interface between two liquids." },
+    { q: "Liquid SG rises but the transmitter range wasn't changed. The reading:", o: ["Reads high", "Reads low", "Stays exact", "Goes to 4 mA"], a: 0, e: "Heavier liquid makes more pressure for the same height, so the reading goes high." },
+    { q: "On a pressurized vessel, the low side connects to:", o: ["Atmosphere", "The vapor space at the top of the vessel", "The drain", "Nothing"], a: 1, e: "Connecting L to the vapor space cancels vessel pressure, leaving only liquid head." },
+    { q: "A Bourdon tube works by:", o: ["Changing resistance with temperature", "Straightening as internal pressure rises", "Reflecting radar", "Floating"], a: 1, e: "Pressure tries to straighten the curved tube, and linkage turns that motion into a needle reading." }
+  ]
+},
+{
+  id: "m9", tag: "09", code: "T/F", title: "Temperature and Flow",
+  sub: "RTDs, thermocouples, orifice plates and flowmeters.",
+  ch: "Ch. 21, Temperature · Ch. 22, Flow", pages: "1513–1584, 1585–1752",
+  cards: [
+    { h: "RTDs", b: `<p>An <b>RTD</b> (resistance temperature detector) is a metal element whose resistance goes up with temperature. The common <b>Pt100</b> is <b>100 Ω at 0 °C</b> and rises about <b>0.385 Ω per °C</b>.</p><p>Lead wire resistance adds error, so RTDs come in <b>2-, 3- and 4-wire</b> versions. <b>3-wire</b> is the industrial standard and cancels most lead resistance. 4-wire is the most accurate.</p>` },
+    { h: "Thermocouples", b: `<p>A <b>thermocouple</b> is two different metals joined at the tip. It produces a tiny voltage, a few millivolts, that depends on the temperature difference between the tip and the <b>reference (cold) junction</b> where it connects to copper.</p><ul><li>The transmitter must apply <b>cold junction compensation</b></li><li>Use matching <b>extension wire</b> all the way to the transmitter</li><li>Common types: <b>K, J, T, E</b>. In US color code, <b>red is negative</b>.</li><li>Reversed polarity makes the reading move the wrong way</li></ul>` },
+    { h: "Thermowells", b: `<p>Temperature sensors usually sit in a <b>thermowell</b>, a closed-end tube welded or threaded into the pipe. You can pull the sensor without opening the process. The trade-off is a slower response.</p><p>Use the right length, and make sure the sensor touches the bottom of the well.</p>` },
+    { h: "DP flow: the square root", b: `<p>An <b>orifice plate</b> squeezes the flow, which speeds it up and drops its pressure (Bernoulli). A DP transmitter measures the pressure drop.</p><p class="formula">Flow ∝ √ΔP</p><p>So <b>25% DP = 50% flow</b>, and <b>50% DP = 70.7% flow</b>. The square root extraction happens either in the transmitter or in the DCS, <b>never both</b>. Doing it twice is a classic mistake.</p><p>At low flows the DP gets tiny, so accuracy drops off. That's why DP flowmeters have limited turndown.</p>` },
+    { h: "Other flowmeters", b: `<ul><li><b>Coriolis:</b> true <b>mass</b> flow plus density. Very accurate. Common for custody transfer and chemical injection.</li><li><b>Magnetic (mag):</b> needs a <b>conductive</b> liquid. Works on water. <b>Won't work on hydrocarbons</b> or gas.</li><li><b>Vortex:</b> counts vortices shed off a bluff body. Good for steam, gas and liquids.</li><li><b>Turbine:</b> a spinning rotor. Clean fluids only.</li><li><b>Ultrasonic:</b> clamp-on or inline, measures transit time</li></ul><p>Gas flow needs <b>pressure and temperature compensation</b>, because gas density changes. Most meters also need <b>straight pipe runs</b> upstream and downstream.</p>` }
+  ],
+  widget: "sqrtFlow",
+  quiz: [
+    { q: "A Pt100 RTD reads about how much resistance at 0 °C?", o: ["0 Ω", "10 Ω", "100 Ω", "1000 Ω"], a: 2, e: "Pt100 = platinum, 100 Ω at 0 °C." },
+    { q: "Why use a 3-wire RTD?", o: ["Cheaper", "To compensate for lead wire resistance", "To get more current", "For thermocouples"], a: 1, e: "The third wire lets the transmitter subtract the lead resistance." },
+    { q: "In US thermocouple color code, the red wire is:", o: ["Positive", "Negative", "Ground", "Shield"], a: 1, e: "Red is negative in the ANSI color code. It's a common gotcha." },
+    { q: "An orifice meter's DP is at 25% of its range. Flow is:", o: ["25%", "50%", "6.25%", "70.7%"], a: 1, e: "√0.25 = 0.5, so 50% flow." },
+    { q: "Square root extraction is applied in both the transmitter and the DCS. Result:", o: ["Double accuracy", "Wrong flow reading", "No effect", "Reading reads zero"], a: 1, e: "Extract the square root only once, either in the transmitter or in the DCS." },
+    { q: "Which meter won't work on crude oil or natural gas?", o: ["Coriolis", "Vortex", "Magnetic", "Ultrasonic"], a: 2, e: "Mag meters need a conductive liquid. Hydrocarbons aren't conductive." },
+    { q: "Which meter measures true mass flow directly?", o: ["Orifice", "Coriolis", "Turbine", "Variable area"], a: 1, e: "Coriolis meters sense mass flow, and density too." },
+    { q: "Gas flow measurement often needs compensation for:", o: ["Color", "Pressure and temperature", "Pipe paint", "Time of day"], a: 1, e: "Gas density changes with pressure and temperature, so volume readings must be corrected." }
+  ]
+},
+{
+  id: "m10", tag: "10", code: "VLV", title: "Control Valves and PID Loops",
+  sub: "The part that moves, and the brain that moves it.",
+  ch: "Ch. 27, Control Valves · Ch. 29, Closed-loop Control", pages: "2083–2238, 2269–2410",
+  cards: [
+    { h: "Control valve anatomy", b: `<ul><li><b>Body:</b> globe (sliding stem), ball, butterfly or plug (rotary)</li><li><b>Trim:</b> the parts that touch the flow, such as the plug, seat and cage</li><li><b>Packing:</b> seals around the moving stem. Too tight and it sticks. Too loose and it leaks.</li><li><b>Actuator:</b> usually a spring-and-diaphragm driven by air</li><li><b>Positioner:</b> takes the 4–20 mA signal and drives air to put the stem exactly where it's told. It often has a built-in <b>I/P</b> (current-to-pressure) converter.</li></ul>` },
+    { h: "Fail-safe position", b: `<p>When air or signal is lost, the actuator spring drives the valve to its <b>fail position</b>:</p><ul><li><b>Air-to-open</b> = spring closes it = <b>Fail Closed (FC)</b></li><li><b>Air-to-close</b> = spring opens it = <b>Fail Open (FO)</b></li></ul><p>The choice comes down to safety. A fuel gas valve should <b>fail closed</b> so you don't feed a fire. A cooling water valve should <b>fail open</b> so you don't overheat equipment. Ask what's safest if everything goes dead.</p>` },
+    { h: "The three PID actions", b: `<ul><li><b>P (proportional, gain):</b> output moves in proportion to error. On its own it leaves a steady <b>offset</b>.</li><li><b>I (integral, reset):</b> keeps pushing the output as long as any error remains, so it <b>removes offset</b>. Too much causes overshoot and cycling.</li><li><b>D (derivative, rate):</b> reacts to <b>how fast</b> the error is changing. It's useful on slow temperature loops and rarely used on noisy flow loops.</li></ul><p>Too much gain makes a loop <b>oscillate</b>. Too little makes it <b>sluggish</b>.</p>` },
+    { h: "Direct vs. reverse action", b: `<p>The controller has to push the valve the <b>right way</b>:</p><ul><li><b>Direct acting:</b> PV goes up, output goes up</li><li><b>Reverse acting:</b> PV goes up, output goes down</li></ul><p>Example: a tank level controlled by a <b>fail-closed outlet</b> valve. If level rises, you need the valve to open more, so output must go up. That's <b>direct</b> acting. If it's set backwards, the loop runs away to one end. The valve's fail mode affects this choice.</p>` },
+    { h: "Manual, auto, and what to check", b: `<p>In <b>manual</b> the operator sets the output directly. In <b>auto</b> the controller does. Before you work on a loop, ask the operator to put it in manual if needed.</p><p>When a loop misbehaves, check the valve first. A <b>sticky valve</b> (stiction, tight packing, failing positioner) causes cycling that no amount of tuning can fix. Stroke it: does it move smoothly to 0, 25, 50, 75 and 100%?</p>` }
+  ],
+  widget: "pidSim",
+  quiz: [
+    { q: "An air-to-open valve loses air. It goes:", o: ["Open", "Closed", "Stays put", "50%"], a: 1, e: "Air-to-open means the spring closes it, so it fails closed." },
+    { q: "A fuel gas supply valve to a heater should usually fail:", o: ["Open", "Closed", "Last position", "It doesn't matter"], a: 1, e: "Failing closed cuts off fuel in an emergency." },
+    { q: "Which PID action removes steady-state offset?", o: ["Proportional", "Integral", "Derivative", "None"], a: 1, e: "Integral (reset) keeps acting until error is zero." },
+    { q: "A loop oscillates steadily. One common tuning cause:", o: ["Gain too high", "Gain too low", "Valve too big", "Wrong tag"], a: 0, e: "Too much gain (or too much integral) makes loops cycle." },
+    { q: "What does a positioner do?", o: ["Measures flow", "Makes the valve stem go exactly to the position the signal asks for", "Opens the relief valve", "Records data"], a: 1, e: "It compares the signal to actual stem position and adjusts air until they match." },
+    { q: "A direct-acting controller does what when PV rises?", o: ["Output increases", "Output decreases", "Output stays the same", "Switches to manual"], a: 0, e: "Direct: PV up, output up. Reverse: PV up, output down." },
+    { q: "Derivative action responds to:", o: ["Size of error", "How long error has existed", "Rate of change of error", "Setpoint only"], a: 2, e: "D looks at how fast things are changing." },
+    { q: "A loop cycles even after retuning. What should you check?", o: ["Paint color", "The valve for stiction or a bad positioner", "The P&ID legend", "Room temperature"], a: 1, e: "Mechanical problems like stiction cause cycling that tuning can't fix." }
+  ]
+},
+{
+  id: "m11", tag: "11", code: "SAFE", title: "Safety and Troubleshooting",
+  sub: "Go home in one piece, and find the fault fast.",
+  ch: "Ch. 32, Process Safety · Ch. 34, Problem-solving", pages: "2601–2710, 2759–2830",
+  cards: [
+    { h: "Classified (hazardous) areas", b: `<p>Where flammable gas could be present, areas are <b>classified</b>:</p><ul><li><b>Class I</b> = flammable gases and vapors</li><li><b>Division 1</b> = present under normal operation. <b>Division 2</b> = only under abnormal conditions.</li><li>The <b>Zone</b> system (0, 1, 2) is the international equivalent.</li></ul><p>Equipment in these areas must be rated for them. That's why you'll see heavy enclosures, conduit seals and special barriers.</p>` },
+    { h: "Explosion-proof vs. intrinsically safe", b: `<ul><li><b>Explosion-proof (XP):</b> the enclosure is strong enough to <b>contain</b> an explosion inside it and cool escaping gases. Don't open one while energized in a hazardous area without proper authorization and a gas test. Every cover bolt and thread matters.</li><li><b>Intrinsically safe (IS):</b> <b>barriers</b> limit energy so much that a spark can't ignite gas. IS wiring is often <b>blue</b>. Never mix IS and non-IS wiring or replace parts with unapproved ones.</li><li><b>Purged/pressurized:</b> clean air keeps gas out of an enclosure.</li></ul>` },
+    { h: "Safety systems", b: `<p>A <b>Safety Instrumented System (SIS)</b> is separate from the normal control system. It shuts things down when a <b>Safety Instrumented Function</b> detects danger, like closing an inlet valve on high-high pressure.</p><ul><li>SIS devices are rated by <b>SIL</b> (Safety Integrity Level) and tested on a schedule</li><li><b>Never bypass</b> a shutdown without the proper permit and authorization</li><li><b>Relief valves</b> and <b>rupture discs</b> are the last line of defense against overpressure</li></ul><p>And always: permits, <b>lockout/tagout</b>, gas monitors, H₂S awareness and stop-work authority.</p>` },
+    { h: "Troubleshoot like a scientist", b: `<ol><li><b>Gather facts.</b> Talk to the operator: what changed, when, and what does the sight glass or local gauge say?</li><li><b>Form a hypothesis</b> that explains <i>all</i> the symptoms</li><li><b>Test it</b> with a measurement that could prove it wrong</li><li><b>Divide and conquer:</b> measure in the middle of the loop to cut the problem in half</li><li><b>Fix, verify and document</b></li></ol><p>Kuphaldt's core lesson: <b>learn principles, not procedures.</b> Understanding the loop lets you diagnose faults no checklist covers.</p>` },
+    { h: "Common mistakes", b: `<ul><li>Not checking the simple stuff first: power, fuses, blocked valves, wrong range</li><li>Swapping parts at random ("shotgunning")</li><li>Trusting one reading without cross-checking it</li><li>Forgetting the process itself can be the problem, like a plugged impulse line, gas in a liquid leg, or a frozen line on the Slope</li><li>Not documenting what you found and did</li></ul><p><b>DMM trick:</b> many transmitters have test terminals. You can read loop current there without breaking the loop. You can also read the voltage across a known resistor and use Ohm's law.</p>` }
+  ],
+  widget: "troubleshoot",
+  quiz: [
+    { q: "Class I, Division 1 means flammable gas is:", o: ["Never present", "Present during normal operation", "Only in labs", "Only in winter"], a: 1, e: "Div 1 = likely present under normal conditions. Div 2 = only under abnormal conditions." },
+    { q: "How does explosion-proof equipment protect you?", o: ["By preventing sparks", "By containing an internal explosion and cooling the escaping gas", "By purging with nitrogen", "By being waterproof"], a: 1, e: "XP enclosures contain the blast. Intrinsic safety prevents ignition energy in the first place." },
+    { q: "Intrinsically safe systems work by:", o: ["Heavy enclosures", "Limiting energy so a spark can't ignite gas", "Grounding everything twice", "Using fiber optics"], a: 1, e: "IS barriers limit voltage and current below ignition energy." },
+    { q: "When is it OK to bypass a shutdown device?", o: ["When it's annoying", "Only with proper permit and authorization", "During night shift", "Never under any circumstance"], a: 1, e: "Bypasses must be authorized, tracked and removed. Unauthorized bypasses kill people." },
+    { q: "First step in troubleshooting a bad reading:", o: ["Replace the transmitter", "Gather facts: talk to the operator and cross-check local indication", "Re-range it", "Call the vendor"], a: 1, e: "Facts first. What changed? What does the sight glass or local gauge show?" },
+    { q: "\"Divide and conquer\" means:", o: ["Split the work with a partner", "Take a measurement in the middle of the system to halve where the fault could be", "Remove half the wiring", "Only check half the devices"], a: 1, e: "Each well-placed measurement eliminates half the possibilities." },
+    { q: "Swapping parts randomly until it works is called:", o: ["Root cause analysis", "Shotgunning, a common mistake", "Calibration", "Loop check"], a: 1, e: "It wastes parts and time, and often hides the real cause." },
+    { q: "A level reads 0% but the sight glass shows half full. Which of these could cause it?", o: ["The transmitter is perfect", "A blocked or isolated impulse line, or a loop fault", "The tank is empty", "The sight glass is always wrong"], a: 1, e: "Check the process side (valves, impulse lines) and the signal (mA, wiring) before trusting either reading." }
+  ]
+}
+);
+const h = (tag, attrs = {}, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === "class") el.className = v;
+    else if (k === "html") el.innerHTML = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : document.createTextNode(kid));
+  return el;
+};
+const fmt = (x, d = 2) => (Math.round(x * 10 ** d) / 10 ** d).toFixed(d);
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const ro = (label, id) => h("div", { class: "ro" }, h("small", {}, label), h("b", { id }, "–"));
+const slider = (label, id, min, max, step, val) => h("label", { class: "field" }, h("span", { id: id + "L" }, label), h("input", { type: "range", id, min, max, step, value: val }));
+const num = (label, id, val, step = "any") => h("label", { class: "field" }, h("span", {}, label), h("input", { type: "number", id, value: val, step, inputmode: "decimal" }));
+
+const WIDGETS = {
+  sortLoop: {
+    title: "Sort the loop",
+    intro: "Each piece of equipment does one of three jobs. Tap the job for each one.",
+    render(root) {
+      const items = shuffle([
+        ["Level transmitter (LT) on a separator", 0], ["Thermocouple in a thermowell", 0], ["Orifice plate and DP transmitter", 0], ["Pressure gauge on a wellhead", 0],
+        ["PID block in the DCS", 1], ["Level controller (LIC)", 1], ["PLC running a shutdown sequence", 1],
+        ["Control valve with positioner", 2], ["Variable speed drive on a pump", 2], ["Shutdown valve (SDV)", 2]
+      ]);
+      const jobs = ["Measure", "Decide", "Act"];
+      const tally = h("div", { class: "note info" }, `0 of ${items.length} sorted`);
+      let right = 0, done = 0;
+      root.append(...items.map(([name, ans]) => {
+        const seg = h("div", { class: "seg" });
+        jobs.forEach((j, i) => seg.append(h("button", { type: "button", onclick: (e) => {
+          if (seg.dataset.done) return; seg.dataset.done = 1; done++;
+          if (i === ans) { e.target.classList.add("right"); right++; } else { e.target.classList.add("wrong"); seg.children[ans].classList.add("right"); }
+          tally.className = "note " + (done === items.length ? (right >= items.length - 1 ? "ok" : "warn") : "info");
+          tally.textContent = done === items.length ? `${right} of ${items.length} correct. ${right === items.length ? "Every loop needs all three jobs, and you've got them straight." : "Green shows the right job. A sensor measures, a controller decides, and anything that changes the process acts."}` : `${done} of ${items.length} sorted, ${right} right so far`;
+        } }, j)));
+        return h("div", { class: "sortitem" }, h("div", { class: "nm" }, name), seg);
+      }), tally);
+    }
+  },
+  ohms: {
+    title: "Ohm's Law bench",
+    intro: "Slide the voltage and resistance and watch the current and power change. Try 24 V across 1,200 Ω, then 250 Ω at 20 mA.",
+    render(root) {
+      root.append(slider("Voltage: 24 V", "oV", 1, 48, 0.5, 24), slider("Resistance: 1200 Ω", "oR", 50, 5000, 10, 1200),
+        h("div", { class: "readouts" }, ro("Current", "oI"), ro("Power", "oP")), h("div", { id: "oN", class: "note info" }));
+      const upd = () => {
+        const V = +root.querySelector("#oV").value, R = +root.querySelector("#oR").value, I = V / R;
+        root.querySelector("#oVL").textContent = `Voltage: ${V} V`; root.querySelector("#oRL").textContent = `Resistance: ${R} Ω`;
+        root.querySelector("#oI").textContent = fmt(I * 1000, 1) + " mA"; root.querySelector("#oP").textContent = fmt(I * V * 1000, 0) + " mW";
+        root.querySelector("#oN").textContent = `I = V ÷ R = ${V} ÷ ${R} = ${fmt(I, 4)} A. ${I * 1000 > 20.5 ? "That's more than a 4–20 mA loop would ever carry." : I * 1000 >= 4 ? "That's inside the 4–20 mA range." : "That's below 4 mA, under the live zero."}`;
+      };
+      root.addEventListener("input", upd); upd();
+    }
+  },
+  loopCalc: {
+    title: "Loop calculator",
+    intro: "Set a transmitter range, then drag the loop current. You'll see the process value, the percent, and the voltage across a 250 Ω resistor.",
+    render(root) {
+      root.append(h("div", { class: "row" }, num("LRV (0%)", "lL", 0), num("URV (100%)", "lU", 200), h("label", { class: "field" }, h("span", {}, "Units"), h("input", { type: "text", id: "lu", value: "PSI" }))),
+        slider("Loop current: 12.00 mA", "lmA", 3, 21.5, 0.05, 12),
+        h("div", { class: "readouts" }, ro("Percent", "lp"), ro("Process value", "lpv"), ro("Across 250 Ω", "lv")),
+        h("div", { class: "meter", style: "height:16px" }, h("i", { id: "lbar" })), h("div", { id: "ln", class: "note" }));
+      const upd = () => {
+        const L = +root.querySelector("#lL").value, U = +root.querySelector("#lU").value, u = root.querySelector("#lu").value, mA = +root.querySelector("#lmA").value;
+        const pct = (mA - 4) / 16 * 100, pv = L + (mA - 4) / 16 * (U - L);
+        root.querySelector("#lmAL").textContent = `Loop current: ${fmt(mA)} mA`;
+        root.querySelector("#lp").textContent = fmt(pct, 1) + "%"; root.querySelector("#lpv").textContent = fmt(pv, 1) + " " + u; root.querySelector("#lv").textContent = fmt(mA * 0.25, 2) + " V";
+        root.querySelector("#lbar").style.width = Math.max(0, Math.min(100, pct)) + "%";
+        const n = root.querySelector("#ln");
+        if (mA < 3.8) { n.className = "note bad"; n.textContent = "Below 3.8 mA: the control system treats this as a downscale fault (NAMUR NE43). Check for an open wire, no power, or a failed transmitter."; }
+        else if (mA > 20.5) { n.className = "note bad"; n.textContent = "Above 20.5 mA: an upscale fault. The transmitter may be signaling a failure, or the loop may be shorted."; }
+        else if (mA < 4 || mA > 20) { n.className = "note warn"; n.textContent = "Slightly out of range. Most systems allow a little under- or over-range before they call it a fault."; }
+        else { n.className = "note ok"; n.textContent = `PV = ${L} + ((${fmt(mA)} − 4) ÷ 16) × ${U - L} = ${fmt(pv, 1)} ${u}`; }
+      };
+      root.addEventListener("input", upd); upd();
+    }
+  },
+  head: {
+    title: "Head pressure calculator",
+    intro: "Liquid height and specific gravity are all you need. Tank width doesn't matter.",
+    render(root) {
+      root.append(h("div", { class: "tank" }, h("div", { html: `<svg width="70" height="150" viewBox="0 0 70 150" aria-hidden="true"><rect x="5" y="5" width="60" height="140" rx="6" fill="none" stroke="currentColor" stroke-width="3"/><rect id="hFill" x="8" y="75" width="54" height="67" rx="3" fill="var(--accent)" opacity=".55"/></svg>` }),
+        h("div", { style: "flex:1;min-width:0;display:grid;gap:8px" }, slider("Liquid height: 10 ft", "hH", 0, 40, 0.5, 10),
+          h("label", { class: "field" }, h("span", {}, "Liquid"), h("select", { id: "hSG" }, ...[["1.00", "Fresh water (SG 1.00)"], ["1.07", "Produced water (SG 1.07)"], ["0.85", "Crude oil (SG 0.85)"], ["0.72", "Light condensate (SG 0.72)"], ["13.6", "Mercury (SG 13.6)"]].map(([v, t]) => h("option", { value: v }, t)))))),
+        h("div", { class: "readouts" }, ro("inH₂O", "hIn"), ro("PSI", "hPsi"), ro("Absolute", "hA")), h("div", { id: "hN", class: "note info" }));
+      const upd = () => {
+        const ft = +root.querySelector("#hH").value, sg = +root.querySelector("#hSG").value, inwc = ft * 12 * sg, psi = inwc / 27.68;
+        root.querySelector("#hHL").textContent = `Liquid height: ${ft} ft`;
+        root.querySelector("#hIn").textContent = fmt(inwc, 1); root.querySelector("#hPsi").textContent = fmt(psi, 2); root.querySelector("#hA").textContent = fmt(psi + 14.7, 1) + " psia";
+        const f = root.querySelector("#hFill"), hgt = Math.min(1, ft / 40) * 134; f.setAttribute("height", hgt); f.setAttribute("y", 142 - hgt);
+        root.querySelector("#hN").textContent = `${ft} ft × 12 in/ft × SG ${sg} = ${fmt(inwc, 1)} inH₂O. Divide by 27.68 to get ${fmt(psi, 2)} PSIG at the bottom of the tank.`;
+      };
+      root.addEventListener("input", upd); upd();
+    }
+  },
+  tagDecoder: {
+    title: "ISA tag decoder",
+    intro: "Type any instrument tag from a P&ID, or tap an example.",
+    render(root) {
+      const first = { A: "Analysis", B: "Burner/combustion", C: "Conductivity (user's choice)", D: "Density (user's choice)", E: "Voltage", F: "Flow", H: "Hand (manual)", I: "Current", J: "Power", K: "Time", L: "Level", M: "Moisture (user's choice)", P: "Pressure", Q: "Quantity", R: "Radiation", S: "Speed", T: "Temperature", U: "Multivariable", V: "Vibration", W: "Weight / force", X: "Unclassified", Y: "Event / state", Z: "Position" };
+      const mods = { D: "Differential", F: "Ratio", Q: "Totalize / integrate", K: "Rate of change", J: "Scan" };
+      const fn = { A: "Alarm", B: "Burner / user's choice", C: "Controller", E: "Primary element (sensor)", G: "Glass / gauge", I: "Indicator", K: "Control station", L: "Light", O: "Orifice / restriction", P: "Test point", R: "Recorder", S: "Switch", T: "Transmitter", V: "Valve / damper", W: "Well (thermowell)", X: "Unclassified", Y: "Relay / compute / convert", Z: "Final element / actuator" };
+      const inp = h("input", { type: "text", id: "tgIn", value: "PDIT-2105", autocapitalize: "characters", spellcheck: "false" });
+      const out = h("div", { class: "tagbreak" }), say = h("div", { class: "note info" });
+      const ex = h("div", { class: "seg" }, ...["LIC-205", "PSHH-40", "TE-112", "FQI-301", "FV-301", "PY-77"].map(t => h("button", { type: "button", onclick: () => { inp.value = t; upd(); } }, t)));
+      root.append(h("label", { class: "field" }, h("span", {}, "Tag"), inp), ex, out, say);
+      function upd() {
+        const raw = inp.value.toUpperCase().trim(), m = raw.match(/^([A-Z]+)[-\s]?(\d+[A-Z]?)?$/);
+        out.innerHTML = "";
+        if (!m) { say.className = "note warn"; say.textContent = "Use letters, then the loop number, like PIT-101."; return; }
+        let letters = m[1], parts = [], words = [];
+        const v = letters[0]; if (!first[v]) { say.className = "note warn"; say.textContent = `"${v}" isn't a standard first letter.`; return; }
+        parts.push([v, first[v]]); words.push(first[v].split(" (")[0]);
+        let rest = letters.slice(1);
+        if (rest.length > 1 && mods[rest[0]] && !(rest[0] === "K" || rest[0] === "J")) { parts.push([rest[0], mods[rest[0]] + " (modifier)"]); words[0] = (rest[0] === "D" ? "Differential " : rest[0] === "F" ? "" : "") + words[0] + (rest[0] === "F" ? " ratio" : ""); if (rest[0] === "Q") words.push("totalizing"); rest = rest.slice(1); }
+        let i = 0, fnWords = [], lim = [];
+        while (i < rest.length) {
+          const c = rest[i];
+          if ((c === "H" || c === "L") && i > 0) { const dbl = rest[i + 1] === c; parts.push([dbl ? c + c : c, (c === "H" ? "High" : "Low") + (dbl ? "-" + (c === "H" ? "high" : "low") : "")]); lim.push((c === "H" ? "high" : "low") + (dbl ? "-" + (c === "H" ? "high" : "low") : "")); i += dbl ? 2 : 1; continue; }
+          if (fn[c]) { parts.push([c, fn[c]]); fnWords.push(fn[c].split(" /")[0].split(" (")[0].toLowerCase()); } else parts.push([c, "Not a standard letter"]);
+          i++;
+        }
+        if (m[2]) parts.push(["#" + m[2], "Loop number"]);
+        parts.forEach(([k, t]) => out.append(h("div", {}, h("b", {}, k), t)));
+        say.className = "note ok";
+        const desc = [words.join(" "), fnWords.join(" "), lim.length ? "(" + lim.join(", ") + ")" : ""].filter(Boolean).join(" ");
+        say.textContent = `${raw}: ${desc.charAt(0).toUpperCase() + desc.slice(1)}${m[2] ? ", loop " + m[2] : ""}.`;
+      }
+      inp.addEventListener("input", upd); upd();
+    }
+  },
+  fittingOrder: {
+    title: "Make up a tube fitting",
+    intro: "Tap the steps in the order you'd do them in the field.",
+    render(root) {
+      const steps = ["Cut the tube square with a tube cutter", "Deburr the tube inside and out", "Insert the tube until it bottoms in the fitting body", "Run the nut down finger-tight", "Mark the nut at the 6 o'clock position", "Tighten 1¼ turns with a wrench (mark ends at 9 o'clock)", "Check the make-up with a gap inspection gauge"];
+      let next = 0; const list = h("div", { class: "orderlist" }), n = h("div", { class: "note info" }, "Step 1: what comes first?");
+      shuffle(steps.map((s, i) => [s, i])).forEach(([s, i]) => {
+        const b = h("button", { type: "button", onclick: () => {
+          if (b.classList.contains("done")) return;
+          if (i === next) { b.classList.add("done"); b.querySelector(".k").textContent = ++next; n.className = next === steps.length ? "note ok" : "note info"; n.textContent = next === steps.length ? "That's the sequence. Finger-tight, mark, then 1¼ turns for 1/4″–1″ sizes. Then gauge it." : `Good. Step ${next + 1}: what's next?`; }
+          else { b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake"); n.className = "note warn"; n.textContent = `Not yet. Think about what has to happen before that. You're on step ${next + 1}.`; }
+        } }, h("span", { class: "k" }, "·"), s);
+        list.append(b);
+      });
+      root.append(list, n, h("button", { type: "button", class: "btn small", onclick: () => { root.innerHTML = ""; WIDGETS.fittingOrder.render(root); } }, "Shuffle and try again"));
+    }
+  },
+  calCheck: {
+    title: "5-point calibration check",
+    intro: "Readings below are example as-found values. Type your own, and the table works out each error as a percent of span.",
+    render(root) {
+      const ex = [4.02, 8.05, 12.08, 16.11, 20.14];
+      const tb = h("tbody");
+      [0, 25, 50, 75, 100].forEach((p, i) => tb.append(h("tr", {}, h("td", {}, p + "%"), h("td", { id: "cIn" + i }), h("td", {}, fmt(4 + 16 * p / 100)), h("td", {}, h("input", { type: "number", id: "cM" + i, value: ex[i], step: "0.01", inputmode: "decimal" })), h("td", { id: "cE" + i }), h("td", { id: "cS" + i }))));
+      root.append(h("div", { class: "row" }, num("LRV (inH₂O)", "cL", 0), num("URV (inH₂O)", "cU", 100), h("label", { class: "field" }, h("span", {}, "Tolerance"), h("select", { id: "cT" }, h("option", { value: "0.25" }, "±0.25% span"), h("option", { value: "0.5", selected: "" }, "±0.5% span"), h("option", { value: "1" }, "±1.0% span")))),
+        h("div", { class: "tablewrap" }, h("table", { class: "caltable" }, h("thead", {}, h("tr", {}, ...["Pt", "Apply", "Ideal mA", "Actual mA", "Error", ""].map(t => h("th", {}, t)))), tb)), h("div", { id: "cN", class: "note" }));
+      const upd = () => {
+        const L = +root.querySelector("#cL").value, U = +root.querySelector("#cU").value, tol = +root.querySelector("#cT").value, errs = [];
+        [0, 25, 50, 75, 100].forEach((p, i) => {
+          root.querySelector("#cIn" + i).textContent = fmt(L + (U - L) * p / 100, 1);
+          const e = (+root.querySelector("#cM" + i).value - (4 + 16 * p / 100)) / 16 * 100; errs.push(e);
+          root.querySelector("#cE" + i).textContent = (e >= 0 ? "+" : "") + fmt(e) + "%";
+          root.querySelector("#cS" + i).innerHTML = Math.abs(e) <= tol ? '<span class="chip ok">pass</span>' : '<span class="chip bad">fail</span>';
+        });
+        const n = root.querySelector("#cN"), bad = errs.some(e => Math.abs(e) > tol), spread = Math.max(...errs) - Math.min(...errs);
+        if (!bad) { n.className = "note ok"; n.textContent = "Every point is in tolerance. Record these as-found readings. No adjustment needed."; }
+        else if (spread < 0.1) { n.className = "note bad"; n.textContent = `Out of tolerance. The error is about the same at every point (${fmt(errs[2])}%), so this is a zero shift. Trim the zero (lower sensor trim), then recheck all five points.`; }
+        else if (Math.abs(errs[0]) <= tol && errs.every((e, i) => i === 0 || Math.abs(e) >= Math.abs(errs[i - 1]) - 0.02)) { n.className = "note bad"; n.textContent = "Out of tolerance. The error grows as you go up the range while 0% is good, so this is a span error. Trim the span (upper sensor trim), then recheck zero."; }
+        else { n.className = "note bad"; n.textContent = "Out of tolerance with a mixed pattern. It could be a zero and span error together, or linearity. Fix zero first, then span, and recheck."; }
+      };
+      root.addEventListener("input", upd); upd();
+    }
+  },
+  dpLevel: {
+    title: "DP level range finder",
+    intro: "Work out LRV and URV for a level transmitter. Change where it's mounted and what's on the low side.",
+    render(root) {
+      root.append(h("div", { class: "row" }, num("Level range (in)", "dH", 100), num("Liquid SG", "dS", 0.85, 0.01), num("Transmitter below lower tap (in)", "dO", 0)),
+        h("label", { class: "field" }, h("span", {}, "Low side"), h("select", { id: "dT" }, h("option", { value: "open" }, "Open tank (L vented to air)"), h("option", { value: "dry" }, "Pressurized, dry leg"), h("option", { value: "wet" }, "Pressurized, wet leg"))),
+        h("label", { class: "field", id: "dWbox" }, h("span", {}, "Wet leg fill SG"), h("input", { type: "number", id: "dW", value: 1.0, step: 0.01, inputmode: "decimal" })),
+        h("div", { class: "readouts" }, ro("LRV inH₂O", "dLRV"), ro("URV inH₂O", "dURV"), ro("Span", "dSp")),
+        slider("Current level: 50%", "dP", 0, 100, 1, 50), h("div", { class: "readouts" }, ro("Transmitter sees", "dSee"), ro("Output", "dmA")), h("div", { id: "dN", class: "note info" }));
+      const upd = () => {
+        const H = +root.querySelector("#dH").value, S = +root.querySelector("#dS").value, O = +root.querySelector("#dO").value, T = root.querySelector("#dT").value, W = +root.querySelector("#dW").value, P = +root.querySelector("#dP").value;
+        root.querySelector("#dWbox").hidden = T !== "wet";
+        const low = T === "wet" ? (O + H) * W : 0, lrv = O * S - low, urv = (O + H) * S - low, see = (O + H * P / 100) * S - low, mA = 4 + 16 * (see - lrv) / (urv - lrv || 1);
+        root.querySelector("#dPL").textContent = `Current level: ${P}%`;
+        root.querySelector("#dLRV").textContent = fmt(lrv, 1); root.querySelector("#dURV").textContent = fmt(urv, 1); root.querySelector("#dSp").textContent = fmt(urv - lrv, 1);
+        root.querySelector("#dSee").textContent = fmt(see, 1); root.querySelector("#dmA").textContent = fmt(mA) + " mA";
+        root.querySelector("#dN").textContent = T === "wet" ? `The wet leg pushes ${fmt(low, 1)} inH₂O on the low side all the time, so the range goes negative. The span is still height × SG = ${fmt(H * S, 1)}.` : O > 0 ? `Mounting ${O}″ below the tap adds ${fmt(O * S, 1)} inH₂O of liquid head at 0% level, so the LRV moves up from zero. The span stays ${fmt(H * S, 1)}.` : `Span = ${H}″ × SG ${S} = ${fmt(H * S, 1)} inH₂O.${T === "dry" ? " The dry leg cancels vessel pressure, so only liquid head counts." : ""}`;
+      };
+      root.addEventListener("input", upd); upd();
+    }
+  },
+  sqrtFlow: {
+    title: "Square root flow",
+    intro: "Drag the differential pressure and watch how flow responds. Low DP still means a lot of flow.",
+    render(root) {
+      const cv = h("canvas", { id: "fC", height: 180 });
+      root.append(h("div", { class: "row" }, num("DP range (inH₂O)", "fR", 100), num("Max flow (BBL/day)", "fM", 5000)), slider("Differential pressure: 25%", "fP", 0, 100, 0.5, 25),
+        h("div", { class: "readouts" }, ro("DP", "fDP"), ro("Flow", "fF"), ro("Flow %", "fFp")), cv, h("div", { id: "fN", class: "note info" }));
+      const upd = () => {
+        const R = +root.querySelector("#fR").value, M = +root.querySelector("#fM").value, p = +root.querySelector("#fP").value, fp = Math.sqrt(p / 100) * 100;
+        root.querySelector("#fPL").textContent = `Differential pressure: ${p}%`;
+        root.querySelector("#fDP").textContent = fmt(R * p / 100, 1) + "″"; root.querySelector("#fF").textContent = Math.round(M * fp / 100).toLocaleString(); root.querySelector("#fFp").textContent = fmt(fp, 1) + "%";
+        root.querySelector("#fN").textContent = `Flow % = √(${p}/100) × 100 = ${fmt(fp, 1)}%. ${p < 10 ? "Down here a tiny DP change means a big flow change, which is why DP meters lose accuracy at low flow." : ""}`;
+        const c = cv, dpr = window.devicePixelRatio || 1, W = c.clientWidth || 300, Hh = 180; c.width = W * dpr; c.height = Hh * dpr; const x = c.getContext("2d"); x.scale(dpr, dpr);
+        const pad = 30, gw = W - pad - 10, gh = Hh - 20 - 26; x.clearRect(0, 0, W, Hh);
+        x.strokeStyle = css("--line"); x.lineWidth = 1; x.font = "11px " + css("--mono"); x.fillStyle = css("--muted");
+        [0, 50, 100].forEach(t => { const yy = 10 + gh - gh * t / 100; x.beginPath(); x.moveTo(pad, yy); x.lineTo(pad + gw, yy); x.stroke(); x.fillText(t + "%", 2, yy + 4); const xx = pad + gw * t / 100; x.fillText(t + "%", xx - (t === 100 ? 26 : t ? 12 : 0), Hh - 8); });
+        x.strokeStyle = css("--muted"); x.setLineDash([4, 4]); x.beginPath(); x.moveTo(pad, 10 + gh); x.lineTo(pad + gw, 10); x.stroke(); x.setLineDash([]);
+        x.strokeStyle = css("--accent"); x.lineWidth = 2.5; x.beginPath(); for (let i = 0; i <= 100; i++) { const xx = pad + gw * i / 100, yy = 10 + gh - gh * Math.sqrt(i / 100); i ? x.lineTo(xx, yy) : x.moveTo(xx, yy); } x.stroke();
+        x.fillStyle = css("--tag"); x.beginPath(); x.arc(pad + gw * p / 100, 10 + gh - gh * fp / 100, 6, 0, 7); x.fill();
+        x.fillStyle = css("--muted"); x.fillText("DP →", pad + gw - 34, 10 + gh - 6); x.fillText("flow ↑", pad + 4, 22);
+      };
+      root.addEventListener("input", upd); setTimeout(upd, 30); addEventListener("resize", upd);
+    }
+  },
+  pidSim: {
+    title: "Loop tuning simulator",
+    intro: "A separator level loop. Change the gain and reset, then bump the setpoint or add an upset. Turn on a sticky valve to see what tuning can't fix.",
+    render(root) {
+      const cv = h("canvas", { id: "pC", height: 200 });
+      root.append(slider("Gain (Kc): 1.0", "pK", 0.2, 8, 0.1, 1), slider("Reset: 0.5 repeats/min", "pI", 0, 3, 0.05, 0.5), cv,
+        h("div", { class: "small muted" }, h("b", { style: "color:var(--muted)" }, "– – SP"), "  ", h("b", { style: "color:var(--accent)" }, "━ PV (level)"), "  ", h("b", { style: "color:var(--tag)" }, "━ Output")),
+        h("div", { class: "seg" }, h("button", { type: "button", id: "pSP" }, "Bump setpoint"), h("button", { type: "button", id: "pD" }, "Add upset"), h("button", { type: "button", id: "pS" }, "Sticky valve: off"), h("button", { type: "button", id: "pR" }, "Restart")), h("div", { id: "pN", class: "note info" }));
+      let st, raf, sticky = false;
+      const reset = () => { st = { t: 0, pv: 50, sp: 50, out: 50, integ: 0, valve: 50, dist: 0, hist: [], delay: Array(16).fill(50) }; };
+      reset();
+      const step = (dt) => {
+        const K = +root.querySelector("#pK").value, I = +root.querySelector("#pI").value;
+        const e = st.pv - st.sp; // direct acting: level up -> open outlet more
+        if (I > 0) st.integ += e * dt * I / 60; else st.integ = 0;
+        st.out = Math.max(0, Math.min(100, 50 + K * (e + st.integ)));
+        if (sticky) { if (Math.abs(st.out - st.valve) > 4) st.valve = st.out; } else st.valve = st.out;
+        st.delay.push(st.valve); const v = st.delay.shift();
+        const inflow = 50 + st.dist; st.pv += (inflow - v) * dt * 0.06; st.pv = Math.max(0, Math.min(100, st.pv));
+        st.t += dt; st.hist.push([st.sp, st.pv, st.out]); if (st.hist.length > 600) st.hist.shift();
+      };
+      const draw = () => {
+        const c = cv, dpr = window.devicePixelRatio || 1, W = c.clientWidth || 300, H = 200; if (c.width !== W * dpr) { c.width = W * dpr; c.height = H * dpr; }
+        const x = c.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H);
+        x.strokeStyle = css("--line"); x.lineWidth = 1; x.font = "10px " + css("--mono"); x.fillStyle = css("--muted");
+        [0, 50, 100].forEach(t => { const y = 8 + (H - 16) * (1 - t / 100); x.beginPath(); x.moveTo(28, y); x.lineTo(W - 4, y); x.stroke(); x.fillText(t, 4, y + 3); });
+        const n = st.hist.length, gw = W - 32, px = (i) => 28 + gw * i / 599, py = (v) => 8 + (H - 16) * (1 - v / 100);
+        [[0, css("--muted"), [5, 4]], [2, css("--tag"), []], [1, css("--accent"), []]].forEach(([k, col, dash]) => { x.strokeStyle = col; x.setLineDash(dash); x.lineWidth = k === 1 ? 2.5 : 1.8; x.beginPath(); st.hist.forEach((r, i) => i ? x.lineTo(px(i + 600 - n), py(r[k])) : x.moveTo(px(i + 600 - n), py(r[k]))); x.stroke(); });
+        x.setLineDash([]);
+      };
+      const assess = () => {
+        const K = +root.querySelector("#pK").value, I = +root.querySelector("#pI").value, nn = root.querySelector("#pN");
+        const last = st.hist.slice(-200).map(r => r[1] - r[0]), mx = Math.max(...last), mn = Math.min(...last), avg = last.reduce((a, b) => a + b, 0) / (last.length || 1);
+        let crossings = 0; for (let i = 1; i < last.length; i++) if (Math.sign(last[i]) !== Math.sign(last[i - 1]) && Math.abs(last[i]) > 0.3) crossings++;
+        if (sticky && crossings > 2) { nn.className = "note warn"; nn.textContent = "Stiction: the valve sticks, then jumps, so the level hunts back and forth. Retuning won't cure this. Fix the valve."; }
+        else if (crossings > 4 && mx - mn > 3) { nn.className = "note bad"; nn.textContent = `Oscillating. Gain ${K} with reset ${I} is too aggressive for this process. Back off the gain or the reset.`; }
+        else if (I === 0 && Math.abs(avg) > 1) { nn.className = "note warn"; nn.textContent = `Proportional-only offset: level is sitting ${fmt(Math.abs(avg), 1)}% away from setpoint. Add some reset to remove it.`; }
+        else if (Math.abs(avg) > 2) { nn.className = "note info"; nn.textContent = "Still recovering. Watch how fast the level returns to setpoint."; }
+        else { nn.className = "note ok"; nn.textContent = "Level is holding at setpoint. Try an upset to see how it recovers."; }
+      };
+      let tick = 0;
+      const loop = () => { for (let i = 0; i < 3; i++) step(0.5); draw(); if (++tick % 20 === 0) assess(); raf = requestAnimationFrame(loop); };
+      root.addEventListener("input", (e) => { if (e.target.id === "pK") root.querySelector("#pKL").textContent = `Gain (Kc): ${fmt(+e.target.value, 1)}`; if (e.target.id === "pI") root.querySelector("#pIL").textContent = `Reset: ${fmt(+e.target.value)} repeats/min`; });
+      root.querySelector("#pSP").onclick = () => { st.sp = st.sp === 50 ? 65 : 50; };
+      root.querySelector("#pD").onclick = () => { st.dist = st.dist ? 0 : 12; root.querySelector("#pD").textContent = st.dist ? "Remove upset" : "Add upset"; };
+      root.querySelector("#pS").onclick = (e) => { sticky = !sticky; e.target.textContent = "Sticky valve: " + (sticky ? "on" : "off"); e.target.classList.toggle("sel", sticky); };
+      root.querySelector("#pR").onclick = () => { reset(); };
+      const obs = new MutationObserver(() => { if (!document.body.contains(cv)) { cancelAnimationFrame(raf); obs.disconnect(); } });
+      obs.observe(document.body, { childList: true, subtree: true });
+      for (let i = 0; i < 120; i++) step(0.5); draw(); assess();
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) raf = requestAnimationFrame(loop);
+      else { const b = h("button", { type: "button", class: "btn small" }, "Run 30 seconds"); b.onclick = () => { for (let i = 0; i < 180; i++) step(0.5); draw(); assess(); }; root.append(b); }
+    }
+  },
+  troubleshoot: {
+    title: "Troubleshooting call-out",
+    intro: "Work the problem one step at a time. Wrong choices explain why, and you can try again.",
+    render(root) {
+      const N = {
+        s: { t: "Operator on the radio: \"LI-310 on the production separator reads 0% on the DCS and the low-level alarm is in. The sight glass shows about half full.\" What do you do first?", o: [
+          ["Swap in a spare transmitter", 0, "That's shotgunning. You don't know the transmitter is bad yet, and swapping it could hide the real cause."],
+          ["Check the transmitter's local display and measure loop current at its test terminals", "a", ""],
+          ["Re-range the transmitter so it reads 50%", 0, "Never make the reading match what you expect. Re-ranging hides the fault and breaks the calibration."]] },
+        a: { t: "The local display reads 0.0 inH₂O. Loop current at the test terminals is 4.00 mA. What does that tell you?", o: [
+          ["The signal side is fine. The transmitter really sees no DP, so look at the process side.", "b", ""],
+          ["There's a broken wire in the loop", 0, "A broken wire gives 0 mA, not 4.00 mA. The loop is intact and the transmitter is reporting 0%."],
+          ["The DCS input card has failed", 0, "The DCS and the transmitter agree: 4 mA = 0%. The card is reading correctly."]] },
+        b: { t: "At the transmitter you find the 3-valve manifold. Both block valves are open. What do you check next?", o: [
+          ["The equalizing valve", "c", ""],
+          ["Tap on the impulse lines with a wrench", 0, "Banging on lines isn't diagnosis. Check the valve that would explain zero DP."],
+          ["The transmitter's power supply voltage", 0, "Power is fine. The transmitter is on and sending 4 mA. The problem is pressure, not power."]] },
+        c: { t: "The equalizer is wide open. Someone left it open after a calibration, so H and L see the same pressure and DP reads zero. You close it per site procedure, and level comes up to 52%, matching the sight glass. What's the last step?", o: [
+          ["Head out to the next job", 0, "Not yet. The operator and the records need to know what happened."],
+          ["Tell the operator, verify against the sight glass, and document the cause and fix", "end", ""]] },
+        end: { t: "Fault found. You worked from facts, measured in the middle of the system, and found the root cause without swapping a single part. That's the method Kuphaldt teaches in Chapter 34." }
+      };
+      const box = h("div", { class: "stack" }); root.append(box);
+      const show = (k) => {
+        box.innerHTML = ""; const node = N[k];
+        box.append(h("div", { class: k === "end" ? "note ok" : "note info" }, node.t));
+        if (!node.o) { box.append(h("button", { type: "button", class: "btn small", onclick: () => show("s") }, "Run it again")); return; }
+        const fb = h("div");
+        const opts = h("div", { class: "opts" }, ...shuffle(node.o).map(([txt, nx, why], i) => h("button", { type: "button", class: "opt", onclick: (e) => {
+          if (nx) { e.currentTarget.classList.add("right"); setTimeout(() => show(nx), 450); }
+          else { e.currentTarget.classList.add("wrong"); fb.className = "note bad"; fb.textContent = why; }
+        } }, h("span", { class: "k" }, "ABC"[i]), txt)));
+        box.append(opts, fb);
+      };
+      show("s");
+    }
+  }
+};
+const ARTIFACT_URL = "";
+const PUBLIC_COPY = true;
+const TRAINER_PHONE = "";     // optional: trainer's mobile number for the Text button
+const PASS = 75;
+const COURSE = "Instrument Tech Fundamentals";
+
+/* ---------- per-device progress (convenience only) ---------- */
+const LS = "itt.v1";
+const load = () => { try { return JSON.parse(localStorage.getItem(LS)) || {}; } catch { return {}; } };
+let S = Object.assign({ name: "", best: {}, tries: {} }, load());
+const save = () => { try { localStorage.setItem(LS, JSON.stringify(S)); } catch {} };
+
+/* ---------- results code ---------- */
+const b64e = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const b64d = (s) => decodeURIComponent(escape(atob(s.replace(/-/g, "+").replace(/_/g, "/"))));
+const makeCode = (r) => "ITT1." + b64e(JSON.stringify(r));
+const readCode = (c) => { try { const r = JSON.parse(b64d(c.slice(5))); return r && r.m && typeof r.s === "number" ? r : null; } catch { return null; } };
+const hashStr = (s) => { let x = 5381; for (let i = 0; i < s.length; i++) x = (x * 33 ^ s.charCodeAt(i)) >>> 0; return x.toString(36); };
+
+/* ---------- platform (trainer tracker storage) ---------- */
+let DB = null, USER = null, EDITOR = false, platformReady = false;
+(async () => {
+  try { USER = await window.claude?.use?.("user"); EDITOR = USER ? !!(await USER.canEdit()) : false; } catch {}
+  try { DB = await window.claude?.use?.("db"); } catch {}
+  platformReady = true;
+  if (["", "home", "tracker"].includes(route())) render();
+})();
+
+/* ---------- routing ---------- */
+const route = () => (location.hash || "").replace("#", "");
+const go = (r) => { if (route() === r) render(); else location.hash = r; scrollTo(0, 0); };
+addEventListener("hashchange", () => { render(); scrollTo(0, 0); });
+const app = document.getElementById("app");
+const modBy = (id) => MODULES.find(m => m.id === id);
+const bubble = (m, big) => h("div", { class: "bubble" + (big ? " big" : "") + ((S.best[m.id]?.pct ?? 0) >= PASS ? " done" : ""), "aria-hidden": "true" }, h("span", { class: "l" }, m.code), h("span", { class: "n" }, m.tag));
+const topbar = (extra) => h("div", { class: "bar" }, h("a", { class: "brand", href: "#home", onclick: (e) => { e.preventDefault(); go("home"); } }, h("span", { class: "dot" }), h("b", {}, COURSE)), extra || "");
+
+function render() {
+  const r = route();
+  app.innerHTML = "";
+  if (r === "tracker" && !PUBLIC_COPY) return renderTracker();
+  const m = modBy(r);
+  if (m) return renderModule(m);
+  renderHome();
+}
+
+/* ---------- home ---------- */
+function renderHome() {
+  const passed = MODULES.filter(m => (S.best[m.id]?.pct ?? 0) >= PASS).length;
+  const nameIn = h("input", { type: "text", id: "nm", value: S.name, placeholder: "First and last name", autocomplete: "name" });
+  nameIn.addEventListener("input", () => { S.name = nameIn.value.trim(); save(); });
+  app.append(topbar(EDITOR ? h("button", { class: "linkbtn", onclick: () => go("tracker") }, "Trainer tracker") : ""),
+    h("div", { class: "hero" }, h("div", { class: "eyebrow" }, "Oil field instrumentation · 11 modules"), h("h1", {}, "Become an instrument tech, one loop at a time"),
+      h("p", {}, "Each module is a short lesson, a hands-on tool to play with, and an 8-question quiz. When you finish a quiz, send your results back to your trainer from the results screen.")),
+    h("div", { class: "namebox" }, h("label", { for: "nm" }, "Your name"), nameIn, h("div", { class: "small muted" }, "Your name goes on your quiz results so your trainer knows who sent them.")),
+    h("div", { class: "overall" }, h("span", { class: "eyebrow" }, `${passed} of ${MODULES.length} passed`), h("div", { class: "meter" }, h("i", { style: `width:${passed / MODULES.length * 100}%` }))),
+    h("div", { class: "modlist" }, ...MODULES.map(m => {
+      const b = S.best[m.id];
+      const chip = !b ? h("span", { class: "chip new" }, "Not started") : b.pct >= PASS ? h("span", { class: "chip ok" }, `Passed ${b.pct}%`) : h("span", { class: "chip bad" }, `Best ${b.pct}%`);
+      return h("a", { class: "mod", href: "#" + m.id, onclick: (e) => { e.preventDefault(); go(m.id); } }, bubble(m), h("div", { class: "txt" }, h("div", { class: "t" }, m.title), h("div", { class: "s" }, m.sub), chip));
+    })),
+    h("p", { class: "foot" }, "Lessons are based on ", h("a", { href: "https://www.ibiblio.org/kuphaldt/socratic/sinst/", target: "_blank", rel: "noopener" }, "Lessons in Industrial Instrumentation"), " by Tony R. Kuphaldt (v2.33), used under the Creative Commons Attribution 4.0 license. Page numbers refer to the printed page numbers in that book. Always follow your site's procedures and your supervisor's direction in the field."));
+}
+
+/* ---------- module ---------- */
+function renderModule(m) {
+  const W = WIDGETS[m.widget];
+  const total = m.cards.length + 2; // cards + try it + quiz
+  let stage = 0; // 0..cards.length-1 lesson, cards.length = widget, cards.length+1 = quiz
+  const head = h("div", {}, topbar(h("button", { class: "linkbtn", onclick: () => go("home") }, "All modules")),
+    h("div", { class: "mhead" }, bubble(m, true), h("div", { class: "txt" }, h("div", { class: "eyebrow" }, "Module " + m.tag), h("h1", {}, m.title))),
+    h("div", { class: "book" }, h("b", {}, "Read more in the book: "), `${m.ch}, pages ${m.pages}`));
+  const steps = h("div", { class: "steps", "aria-hidden": "true" });
+  const body = h("div");
+  app.append(head, steps, body);
+
+  const drawSteps = () => { steps.innerHTML = ""; for (let i = 0; i < total; i++) steps.append(h("i", { class: i < stage ? "on" : i === stage ? "cur" : "" })); };
+  const show = () => {
+    drawSteps(); body.innerHTML = "";
+    if (stage < m.cards.length) {
+      const c = m.cards[stage];
+      body.append(h("div", { class: "sheet" }, h("div", { class: "cn" }, `LESSON ${stage + 1} OF ${m.cards.length}`), h("h2", {}, c.h), h("div", { html: c.b })),
+        h("div", { class: "nav" }, h("button", { class: "btn", disabled: stage === 0 ? "" : false, onclick: () => { stage--; show(); scrollTo(0, 0); } }, "Back"),
+          h("button", { class: "btn primary grow", onclick: () => { stage++; show(); scrollTo(0, 0); } }, stage === m.cards.length - 1 ? "Try it yourself" : "Next")));
+    } else if (stage === m.cards.length) {
+      const wroot = h("div", { class: "widget" });
+      body.append(h("div", { class: "sheet" }, h("div", { class: "cn" }, "TRY IT"), h("h2", {}, W.title), h("p", { class: "muted" }, W.intro), wroot, h("div", { style: "height:10px" })),
+        h("div", { class: "nav" }, h("button", { class: "btn", onclick: () => { stage--; show(); scrollTo(0, 0); } }, "Back"), h("button", { class: "btn primary grow", onclick: () => { stage++; show(); scrollTo(0, 0); } }, "Take the quiz")));
+      W.render(wroot);
+    } else quizIntro(m, body, () => { stage = m.cards.length; show(); });
+  };
+  show();
+}
+
+function quizIntro(m, body, back) {
+  const nameIn = h("input", { type: "text", id: "qnm", value: S.name, placeholder: "First and last name", autocomplete: "name" });
+  const start = h("button", { class: "btn primary grow", disabled: S.name ? false : "" }, "Start quiz");
+  nameIn.addEventListener("input", () => { S.name = nameIn.value.trim(); save(); start.disabled = !S.name; });
+  start.onclick = () => runQuiz(m, body);
+  body.append(h("div", { class: "sheet" }, h("div", { class: "cn" }, "QUIZ"), h("h2", {}, `${m.quiz.length} questions`),
+    h("p", {}, `You need ${Math.ceil(m.quiz.length * PASS / 100)} right (${PASS}%) to pass. You'll see the answer and an explanation after each question. You can retake it as many times as you like, and your trainer sees every attempt you send.`),
+    h("div", { class: "field" }, h("label", { for: "qnm" }, "Your name"), nameIn), h("div", { style: "height:12px" })),
+    h("div", { class: "nav" }, h("button", { class: "btn", onclick: back }, "Back"), start));
+}
+
+function runQuiz(m, body) {
+  const order = m.quiz.map((q, i) => i);
+  const t0 = Date.now(); let i = 0; const picks = [];
+  const next = () => {
+    body.innerHTML = ""; scrollTo(0, 0);
+    if (i >= order.length) return results(m, body, picks, Math.round((Date.now() - t0) / 1000));
+    const q = m.quiz[order[i]];
+    const fb = h("div", { class: "fb" }); const cont = h("div", { class: "nav" });
+    const perm = shuffle(q.o.map((_, k) => k));
+    const opts = h("div", { class: "opts" }, ...perm.map((k, pos) => h("button", { class: "opt", type: "button", onclick: () => {
+      [...opts.children].forEach(b => b.disabled = true);
+      opts.children[perm.indexOf(q.a)].classList.add("right"); if (k !== q.a) opts.children[pos].classList.add("wrong");
+      picks.push(k);
+      fb.className = "fb note " + (k === q.a ? "ok" : "bad");
+      fb.innerHTML = ""; fb.append(h("b", {}, k === q.a ? "Correct. " : "Not quite. "), q.e);
+      cont.append(h("button", { class: "btn primary grow", onclick: () => { i++; next(); } }, i === order.length - 1 ? "See my results" : "Next question"));
+      cont.querySelector("button").focus();
+    } }, h("span", { class: "k" }, "ABCD"[pos]), q.o[k])));
+    body.append(h("div", { class: "sheet" }, h("div", { class: "qcount" }, h("span", { class: "cn", style: "margin:0" }, `QUESTION ${i + 1} OF ${order.length}`), h("span", { class: "chip new" }, `${picks.filter((p, j) => p === m.quiz[order[j]].a).length} right`)),
+      h("div", { class: "q" }, q.q), opts, fb, h("div", { style: "height:12px" })), cont);
+  };
+  next();
+}
+
+function resultText(m, r) {
+  const when = new Date(r.d * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const mins = Math.max(1, Math.round(r.dur / 60));
+  return `${COURSE}\nModule ${m.tag}: ${m.title}\nName: ${r.n}\nScore: ${r.s}/${r.t} (${Math.round(r.s / r.t * 100)}%) ${r.s / r.t * 100 >= PASS ? "PASS" : "NOT YET"}\n${r.x.length ? "Missed: Q" + r.x.map(n => n + 1).join(", Q") : "Missed: none"}\nAttempt ${r.a} · ${mins} min · ${when}\nCode: ${makeCode(r)}`;
+}
+
+function results(m, body, picks, dur) {
+  const s = picks.filter((p, j) => p === m.quiz[j].a).length, t = m.quiz.length, pct = Math.round(s / t * 100), pass = pct >= PASS;
+  S.tries[m.id] = (S.tries[m.id] || 0) + 1;
+  if (!S.best[m.id] || pct > S.best[m.id].pct) S.best[m.id] = { pct, s, t };
+  save();
+  const r = { v: 1, n: S.name || "Trainee", m: m.id, s, t, x: picks.map((p, j) => p === m.quiz[j].a ? -1 : j).filter(j => j >= 0), a: S.tries[m.id], d: Math.round(Date.now() / 1000), dur };
+  const txt = resultText(m, r);
+  const copied = h("div", { class: "small muted", "aria-live": "polite" });
+  const pre = h("pre", { class: "report", id: "rep" }, txt);
+  const copy = h("button", { class: "btn primary grow", type: "button", onclick: async () => {
+    try { await navigator.clipboard.writeText(txt); copied.textContent = "Copied. Now paste it into a text to your trainer."; }
+    catch { const sel = getSelection(), rg = document.createRange(); rg.selectNodeContents(pre); sel.removeAllRanges(); sel.addRange(rg); copied.textContent = "The results are selected. Use your phone's Copy, then paste them into a text to your trainer."; }
+  } }, "Copy my results");
+  const sms = h("a", { class: "btn grow", href: `sms:${TRAINER_PHONE}?&body=${encodeURIComponent(txt)}` }, "Open in Messages");
+  const nextM = MODULES[MODULES.indexOf(m) + 1];
+  const ring = h("div", { class: "ring", style: `background:conic-gradient(var(${pass ? "--ok" : "--bad"}) ${pct}%, var(--sunk) 0)` }, h("span", { style: "background:var(--surface);width:76px;height:76px;border-radius:50%;display:grid;place-items:center" }, pct + "%"));
+  body.append(h("div", { class: "sheet" }, h("div", { class: "cn" }, "RESULTS"),
+    h("div", { class: "score" }, ring, h("div", {}, h("h2", {}, pass ? "Passed" : "Not yet"), h("div", { class: "muted" }, `${s} of ${t} correct · attempt ${r.a}`), h("div", { class: "muted small" }, pass ? "Nice work. Send your results, then move on." : `You need ${PASS}%. Review the missed questions and give it another try.`))),
+    h("div", { class: "stack" }, h("h3", {}, "Send your results to your trainer"), h("p", { class: "small", style: "margin:0" }, "Tap Copy, then paste into a reply to the text you got this link in. Or try Open in Messages, which works on most phones."),
+      h("div", { class: "nav", style: "margin:0;flex-wrap:wrap" }, copy, sms), copied, pre),
+    r.x.length ? h("div", { class: "section" }, h("h3", {}, "Review what you missed"), h("div", { class: "missed" }, ...r.x.map(j => h("div", {}, h("b", {}, `Q${j + 1}. ${m.quiz[j].q}`), h("br"), `Answer: ${m.quiz[j].o[m.quiz[j].a]}. `, h("span", { class: "muted" }, m.quiz[j].e))))) : "",
+    h("div", { style: "height:14px" })),
+    h("div", { class: "nav", style: "flex-wrap:wrap" }, h("button", { class: "btn", onclick: () => runQuiz(m, body) }, "Retake quiz"),
+      nextM ? h("button", { class: "btn primary grow", onclick: () => go(nextM.id) }, `Next: ${nextM.title}`) : h("button", { class: "btn primary grow", onclick: () => go("home") }, "Back to all modules")));
+}
+
+/* ---------- trainer tracker ---------- */
+let unsub = null, ROWS = [];
+const localRows = () => { try { return JSON.parse(localStorage.getItem("itt.tracker")) || []; } catch { return []; } };
+const setLocalRows = (rows) => { try { localStorage.setItem("itt.tracker", JSON.stringify(rows)); } catch {} };
+
+function renderTracker() {
+  const usingDb = DB && EDITOR;
+  const msg = h("div", { "aria-live": "polite" });
+  const ta = h("textarea", { id: "paste", placeholder: "Paste one or more result texts here. Anything with a Code: ITT1… line works." });
+  const add = h("button", { class: "btn primary", type: "button" }, "Add results");
+  const grid = h("div"), list = h("div", { class: "sublist" });
+  app.append(topbar(h("button", { class: "linkbtn", onclick: () => go("home") }, "Course")),
+    h("div", { class: "hero" }, h("div", { class: "eyebrow" }, "Trainer only"), h("h1", {}, "Trainee tracker"),
+      h("p", {}, "When a trainee texts you their results, paste the whole message here. Every attempt is recorded and the grid shows each person's best score per module.")),
+    !platformReady ? h("div", { class: "note info" }, "Connecting to saved results…") :
+      usingDb ? "" : DB && !EDITOR ? h("div", { class: "note warn" }, "Only the course owner can view and add results here.") :
+      h("div", { class: "note warn" }, "Saved results aren't available in this view, so anything you add is kept on this device only. Open the course from your Claude account to keep results in one place."),
+    h("div", { class: "section" }, h("h2", {}, "Add results"), ta, h("div", { class: "nav", style: "margin:0" }, add), msg),
+    h("div", { class: "section" }, h("h2", {}, "Progress"), grid),
+    h("div", { class: "section" }, h("h2", {}, "All attempts"), list),
+    sendSection());
+
+  const draw = () => {
+    grid.innerHTML = ""; list.innerHTML = "";
+    if (!ROWS.length) { grid.append(h("div", { class: "note info" }, "No results yet. Text a trainee a module link from the list below. When they send back their results, paste them above.")); return; }
+    const people = {};
+    ROWS.forEach(r => { const k = r.name.trim().toLowerCase(); (people[k] ||= { name: r.name, mods: {} }); const c = people[k].mods[r.module] ||= { best: 0, n: 0 }; c.n++; c.best = Math.max(c.best, r.pct); });
+    const tbl = h("table", { class: "grid" }, h("thead", {}, h("tr", {}, h("th", {}, "Trainee"), ...MODULES.map(m => h("th", { title: m.title }, m.tag)), h("th", {}, "Passed"))),
+      h("tbody", {}, ...Object.values(people).sort((a, b) => a.name.localeCompare(b.name)).map(p => h("tr", {}, h("td", {}, h("b", {}, p.name)),
+        ...MODULES.map(m => { const c = p.mods[m.id]; return h("td", {}, c ? h("span", { class: "cell " + (c.best >= PASS ? "ok" : "bad"), title: `${c.n} attempt(s)` }, c.best + "%") : h("span", { class: "cell none" }, "—")); }),
+        h("td", {}, h("b", {}, `${MODULES.filter(m => (p.mods[m.id]?.best ?? 0) >= PASS).length}/${MODULES.length}`))))));
+    grid.append(h("div", { class: "tablewrap sheet", style: "padding:8px" }, tbl), h("div", { class: "small muted" }, "Green = passed (75%+). Red = best score so far is below passing. Hover or long-press a cell to see the attempt count."));
+    [...ROWS].sort((a, b) => b.at - a.at).forEach(r => {
+      const m = modBy(r.module);
+      let armed = false;
+      const del = h("button", { class: "btn small", type: "button", onclick: async () => {
+        if (!armed) { armed = true; del.textContent = "Confirm delete"; setTimeout(() => { armed = false; del.textContent = "Delete"; }, 4000); return; }
+        if (usingDb) { try { await DB.collection("results").doc(r._id).delete(); } catch { msg.className = "note bad"; msg.textContent = "Couldn't delete that attempt. Try again."; } }
+        else { ROWS = ROWS.filter(x => x._id !== r._id); setLocalRows(ROWS); draw(); }
+      } }, "Delete");
+      list.append(h("div", { class: "sub" }, h("div", { class: "txt" }, h("b", {}, r.name), " · ", m ? `${m.tag} ${m.title}` : r.module, h("br"),
+        h("span", { class: "small muted" }, `${r.score}/${r.total} (${r.pct}%) · attempt ${r.attempt} · ${new Date(r.at * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}${r.missed?.length ? " · missed Q" + r.missed.map(n => n + 1).join(", Q") : ""}`)),
+        h("span", { class: "chip " + (r.pct >= PASS ? "ok" : "bad") }, r.pct >= PASS ? "Pass" : "Not yet"), EDITOR || !DB ? del : ""));
+    });
+  };
+
+  add.onclick = async () => {
+    const codes = [...new Set(ta.value.match(/ITT1\.[A-Za-z0-9_-]+/g) || [])];
+    if (!codes.length) { msg.className = "note bad"; msg.textContent = "No result codes found. Paste the whole text, including the line that starts with Code: ITT1."; return; }
+    let added = 0, dup = 0, bad = 0;
+    for (const c of codes) {
+      const r = readCode(c); if (!r || !modBy(r.m)) { bad++; continue; }
+      const id = "r" + hashStr(c), row = { name: String(r.n).slice(0, 80), module: r.m, score: r.s, total: r.t, pct: Math.round(r.s / r.t * 100), missed: r.x || [], attempt: r.a || 1, at: r.d, dur: r.dur || 0, addedAt: Math.round(Date.now() / 1000) };
+      if (ROWS.some(x => x._id === id)) { dup++; continue; }
+      if (usingDb) { try { await DB.collection("results").doc(id).set(row); added++; } catch { bad++; } }
+      else { ROWS.push({ ...row, _id: id }); added++; }
+    }
+    if (!usingDb) { setLocalRows(ROWS); draw(); }
+    msg.className = "note " + (added ? "ok" : "warn");
+    msg.textContent = `Added ${added} result${added === 1 ? "" : "s"}.` + (dup ? ` ${dup} already recorded.` : "") + (bad ? ` ${bad} couldn't be read.` : "");
+    if (added) ta.value = "";
+  };
+
+  if (unsub) { unsub(); unsub = null; }
+  if (usingDb) {
+    unsub = DB.collection("results").onSnapshot((snap) => { ROWS = snap.docs.map(d => ({ ...d.data(), _id: d.id })); if (document.body.contains(grid)) draw(); },
+      () => { msg.className = "note bad"; msg.textContent = "Couldn't load saved results. Reload the page to try again."; });
+  } else { ROWS = localRows(); }
+  draw();
+}
+
+function sendSection() {
+  const sec = h("div", { class: "section" }, h("h2", {}, "Send a module"));
+  if (!ARTIFACT_URL) { sec.append(h("div", { class: "note info" }, "Module links appear here once the course is published.")); return sec; }
+  sec.append(h("p", { class: "small muted", style: "margin:0" }, "Copy a message and text it to your trainee. Share the course with a public link first (Share menu) so they can open it without an account."));
+  MODULES.forEach(m => {
+    const link = `${ARTIFACT_URL}#${m.id}`, text = `Instrument tech training, Module ${m.tag}: ${m.title}. Work through the lesson and quiz, then text me your results: ${link}`;
+    const st = h("span", { class: "small muted" });
+    sec.append(h("div", { class: "linkrow" }, bubble(m), h("div", { class: "txt" }, h("b", {}, m.title), h("br"), h("span", { class: "small muted" }, link), st),
+      h("button", { class: "btn small", type: "button", onclick: async () => { try { await navigator.clipboard.writeText(text); st.textContent = " · Copied"; } catch { st.textContent = " · Copy failed, long-press the link instead"; } } }, "Copy text")));
+  });
+  return sec;
+}
+
+render();
+</script>
+</body>
+</html>
