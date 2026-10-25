@@ -199,6 +199,26 @@ canvas{width:100%;display:block;background:var(--bg);border-radius:8px;border:1p
 .art .spin{animation:spin 3s linear infinite;transform-box:fill-box;transform-origin:center}
 @keyframes sway{0%,100%{transform:rotate(-35deg)}50%{transform:rotate(35deg)}}
 .art .sway{animation:sway 4s ease-in-out infinite;transform-box:view-box}
+
+/* interactive figures */
+.ihost{display:grid;gap:10px;margin:0 0 14px}
+.ictl{display:grid;gap:10px}
+.ictl:empty{display:none}
+.islider span,.ilabel{font-size:.88rem;font-weight:700;color:var(--ink)}
+.ibtns{display:flex;flex-wrap:wrap;gap:8px}
+.ro.ok{background:var(--ok-soft)}.ro.bad{background:var(--bad-soft)}.ro.warn{background:var(--warn-soft)}
+.ro.ok b{color:var(--ok)}.ro.bad b{color:var(--bad)}
+.itasks{background:var(--surface);border:2px dashed var(--tag);border-radius:10px;padding:10px 12px;display:grid;gap:6px}
+.itask{display:flex;gap:10px;align-items:flex-start;font-size:.95rem;line-height:1.35}
+.ibox{flex:none;width:20px;height:20px;border-radius:5px;border:2px solid var(--muted);display:grid;place-items:center;font-size:.8rem;font-weight:700;color:var(--surface)}
+.itask.ok{color:var(--muted)}.itask.ok .ibox{background:var(--ok);border-color:var(--ok)}
+.idone{font-weight:700;color:var(--ok);font-size:.93rem}
+.art .idrag{cursor:grab;touch-action:none}.art .idrag:active{cursor:grabbing}
+.art .ihandle{cursor:grab;touch-action:none}
+@keyframes iring{0%{transform:scale(.7);opacity:1}100%{transform:scale(1.7);opacity:0}}
+.art .iring{animation:iring 1.4s ease-out infinite;transform-box:fill-box;transform-origin:center}
+.ihist .art{margin:0}
+.cardtag{display:inline-block;font-family:var(--mono);font-size:.68rem;font-weight:700;letter-spacing:.08em;background:var(--tag);color:var(--tag-ink);padding:2px 7px;border-radius:4px;margin-left:8px;vertical-align:2px}
 @media (prefers-reduced-motion: reduce){.art *{animation:none!important}}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -2466,6 +2486,268 @@ ART.m11 = [
 </svg>`
 ];
 
+/* Interactive engine for lesson figures.
+   INTERACT.m1 = [ spec | null, ... ]  one per card.
+   spec = { art?: "<svg ...>" (replaces the card's ART), run(ctx) }  */
+const INTERACT = {};
+const SVGNS = "http://www.w3.org/2000/svg";
+
+function mountInteractive(mid, idx, artEl, host) {
+  const spec = INTERACT[mid]?.[idx]; if (!spec || !artEl) return null;
+  const ctx = makeCtx(artEl, host, mid + "c" + (idx + 1));
+  try { spec.run(ctx); ctx.update(); } catch (e) { console.error("interactive " + mid + " card " + (idx + 1), e); }
+  return ctx;
+}
+
+function makeCtx(svg, host, key) {
+  const ctl = h("div", { class: "ictl" }), fb = h("div", { class: "note info ifb", hidden: "" }), taskBox = h("div", { class: "itasks", hidden: "" });
+  host.append(ctl, fb, taskBox);
+  const state = {}, tasks = [], timers = [], watchers = [];
+  const alive = () => document.body.contains(svg);
+  const ctx = {
+    svg, host, state, key,
+    $: (sel) => svg.querySelector(sel), $$: (sel) => [...svg.querySelectorAll(sel)],
+    attr(sel, a, v) { const el = typeof sel === "string" ? svg.querySelector(sel) : sel; if (el) el.setAttribute(a, v); return el; },
+    text(sel, s) { const el = typeof sel === "string" ? svg.querySelector(sel) : sel; if (el) el.textContent = s; return el; },
+    style(sel, prop, v) { const el = typeof sel === "string" ? svg.querySelector(sel) : sel; if (el) el.style[prop] = v; return el; },
+    show(sel, on) { const el = typeof sel === "string" ? svg.querySelector(sel) : sel; if (el) el.style.display = on ? "" : "none"; return el; },
+    /* live explanation under the controls */
+    say(msg, kind = "info") { fb.hidden = !msg; fb.className = "note ifb " + kind; fb.innerHTML = msg; },
+    /* range slider; label shows live value */
+    slider({ label, min, max, step = 1, value, fmt = (v) => v, onInput }) {
+      const id = key + "-s" + ctl.children.length, lab = h("span", {}), inp = h("input", { type: "range", id, min, max, step, value });
+      const wrap = h("label", { class: "field islider", for: id }, lab, inp); ctl.append(wrap);
+      const fire = () => { const v = +inp.value; lab.textContent = `${label}: ${fmt(v)}`; onInput && onInput(v); ctx.update(); };
+      inp.addEventListener("input", fire); lab.textContent = `${label}: ${fmt(+value)}`; setTimeout(() => onInput && (onInput(+inp.value), ctx.update()), 0);
+      return { el: inp, value: () => +inp.value, set(v) { inp.value = v; fire(); } };
+    },
+    /* segmented choice */
+    toggle({ label, options, value, onChange }) {
+      const seg = h("div", { class: "seg" }); let cur = value;
+      const render = () => [...seg.children].forEach((b, i) => b.classList.toggle("sel", options[i].value === cur));
+      options.forEach(o => seg.append(h("button", { type: "button", onclick: () => { cur = o.value; render(); onChange && onChange(cur); ctx.update(); } }, o.label)));
+      ctl.append(label ? h("div", { class: "field" }, h("span", { class: "ilabel" }, label), seg) : seg); render(); setTimeout(() => onChange && (onChange(cur), ctx.update()), 0);
+      return { value: () => cur, set(v) { cur = v; render(); onChange && onChange(cur); ctx.update(); } };
+    },
+    button(label, onClick, cls = "") { const b = h("button", { type: "button", class: "btn small " + cls, onclick: () => { onClick(); ctx.update(); } }, label); (ctl.querySelector(".ibtns") || ctl.appendChild(h("div", { class: "ibtns" }))).append(b); return b; },
+    /* readout tiles: ctx.readouts([{key:"ma",label:"Loop current"}]) then r.set("ma","12.0 mA","ok") */
+    readouts(list) {
+      const box = h("div", { class: "readouts" }), map = {};
+      list.forEach(r => { const b = h("b", {}, "–"), d = h("div", { class: "ro" }, h("small", {}, r.label), b); map[r.key] = { b, d }; box.append(d); });
+      ctl.append(box);
+      return { set(k, txt, st) { const m = map[k]; if (!m) return; m.b.textContent = txt; m.d.className = "ro" + (st ? " " + st : ""); } };
+    },
+    /* "Try this" checklist; check(state) returns true when done */
+    tasks(list) { taskBox.hidden = false; taskBox.innerHTML = ""; taskBox.append(h("div", { class: "eyebrow" }, "Try this")); list.forEach(t => { const li = h("div", { class: "itask" }, h("span", { class: "ibox" }), h("span", {}, t.text)); tasks.push({ ...t, li, done: false }); taskBox.append(li); }); taskBox.append(h("div", { class: "idone", hidden: "" })); },
+    update() {
+      tasks.forEach(t => { if (!t.done) { let ok = false; try { ok = !!t.check(state); } catch {} if (ok) { t.done = true; t.li.classList.add("ok"); t.li.querySelector(".ibox").textContent = "✓"; } } });
+      if (tasks.length) { const n = tasks.filter(t => t.done).length, d = taskBox.querySelector(".idone"); d.hidden = n < tasks.length; d.textContent = n === tasks.length ? "Nice work. You've tried everything on this card. Read the notes below, then tap Next." : ""; }
+      watchers.forEach(w => w());
+    },
+    watch(fn) { watchers.push(fn); },
+    /* timers that stop when the card is gone */
+    every(ms, fn) { const t = setInterval(() => { if (!alive()) return clearInterval(t); fn(); }, ms); timers.push(t); return t; },
+    /* pointer drag in viewBox units. opts: {axis:"x"|"y"|"xy", min, max, minY, maxY, onMove(v or {x,y})} */
+    drag(el, opts) {
+      el.classList.add("idrag"); el.setAttribute("tabindex", "0"); el.setAttribute("role", "slider");
+      const toSvg = (e) => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); };
+      const lo = opts.min ?? 0, hi = opts.max ?? 320;
+      const emit = (p) => { if (opts.axis === "xy") opts.onMove({ x: clamp(p.x, opts.min ?? 0, opts.max ?? 320), y: clamp(p.y, opts.minY ?? 0, opts.maxY ?? 240) }); else opts.onMove(clamp(opts.axis === "x" ? p.x : p.y, lo, hi)); ctx.update(); svg.querySelectorAll(".ihint").forEach(n => n.remove()); };
+      let on = false;
+      el.addEventListener("pointerdown", (e) => { on = true; el.setPointerCapture(e.pointerId); e.preventDefault(); emit(toSvg(e)); });
+      el.addEventListener("pointermove", (e) => { if (on) emit(toSvg(e)); });
+      el.addEventListener("pointerup", () => { on = false; }); el.addEventListener("pointercancel", () => { on = false; });
+      el.addEventListener("keydown", (e) => { if (!opts.keyStep || opts.axis === "xy") return; const d = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 }[e.key]; if (!d) return; e.preventDefault(); opts.keyStep(opts.axis === "y" ? d : -(-d)); ctx.update(); });
+    },
+    /* a visible grab handle with pulsing ring + "drag" hint at (x,y). Returns the <g>; move it with ctx.place(g,x,y) */
+    handle(x, y, hint = "drag") {
+      const g = document.createElementNS(SVGNS, "g"); g.setAttribute("class", "ihandle");
+      g.innerHTML = `<circle r="18" fill="var(--tag)" opacity="0" class="ihit"/><circle r="12" fill="none" stroke="var(--tag)" stroke-width="2" class="iring"/><circle r="7" fill="var(--tag)" stroke="var(--ink)" stroke-width="2"/>`;
+      svg.appendChild(g); ctx.place(g, x, y);
+      if (hint) { const t = document.createElementNS(SVGNS, "text"); t.setAttribute("class", "ihint lbl"); t.setAttribute("x", x + 16); t.setAttribute("y", y - 12); t.style.fill = "var(--tag)"; t.textContent = hint; svg.appendChild(t); }
+      return g;
+    },
+    place(g, x, y) { g.setAttribute("transform", `translate(${x} ${y})`); },
+    /* Historian trend screen (IP21 style) with an operator reading it */
+    historian({ tag = "LI-101", unit = "%", min = 0, max = 100, hi, lo, title = "IP21 TREND", decimals = 1 } = {}) {
+      const box = h("div", { class: "ihist" }); host.insertBefore(box, ctl);
+      box.innerHTML = `<svg class="art" viewBox="0 0 320 132" role="img" aria-label="Historian trend screen in the control room with an operator reading the value">
+        <rect x="4" y="6" width="214" height="112" rx="6" fill="var(--ink)" stroke="var(--ink)" stroke-width="2"/>
+        <rect x="10" y="12" width="202" height="94" rx="3" fill="var(--surface)" stroke="none"/>
+        <rect x="10" y="12" width="202" height="13" fill="var(--accent-soft)" stroke="none"/>
+        <text x="15" y="22" class="sm" style="fill:var(--ink)">${title} · ${tag}</text><text x="207" y="22" text-anchor="end" class="sm" style="fill:var(--ink)" data-r="clock">live</text>
+        <line x1="40" y1="30" x2="40" y2="98" stroke="var(--line)" stroke-width="1"/><line x1="40" y1="98" x2="206" y2="98" stroke="var(--line)" stroke-width="1"/>
+        <text x="37" y="34" text-anchor="end" class="sm">${max}</text><text x="37" y="99" text-anchor="end" class="sm">${min}</text>
+        ${hi != null ? `<line x1="40" x2="206" data-r="hi" stroke="var(--bad)" stroke-width="1" stroke-dasharray="3 3"/><text x="204" text-anchor="end" class="sm" style="fill:var(--bad)" data-r="hit">HI ${hi}</text>` : ""}
+        ${lo != null ? `<line x1="40" x2="206" data-r="lo" stroke="var(--bad)" stroke-width="1" stroke-dasharray="3 3"/><text x="204" text-anchor="end" class="sm" style="fill:var(--bad)" data-r="lot">LO ${lo}</text>` : ""}
+        <polyline data-r="line" fill="none" stroke="var(--accent)" stroke-width="2.2" points=""/>
+        <circle data-r="dot" r="3.5" fill="var(--accent)"/>
+        <rect x="118" y="108" width="56" height="18" rx="2" fill="var(--ink)" stroke="none"/><path d="M100 128 H192" stroke="var(--ink)" stroke-width="3"/>
+        <g data-r="op"><circle cx="268" cy="44" r="13" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/><path d="M262 42 h3 M271 42 h3" stroke="var(--ink)" stroke-width="2"/><path d="M263 50 q5 4 10 0" fill="none" stroke="var(--ink)" stroke-width="1.6" data-r="mouth"/>
+          <path d="M246 104 V76 q0 -16 22 -16 q22 0 22 16 V104 Z" fill="var(--accent)" stroke="var(--ink)" stroke-width="2"/><path d="M250 80 L226 88" stroke="var(--ink)" stroke-width="5" stroke-linecap="round"/><rect x="236" y="104" width="62" height="8" rx="2" fill="var(--muted)"/><path d="M244 112 v14 M290 112 v14" stroke="var(--muted)" stroke-width="3"/></g>
+        <g data-r="bubble"><rect x="226" y="2" width="90" height="24" rx="6" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5" data-r="bub"/><text x="271" y="18" text-anchor="middle" class="lbl" data-r="say">${tag} --</text></g>
+        <rect x="150" y="30" width="56" height="16" rx="3" fill="var(--ink)" stroke="none"/><text x="178" y="42" text-anchor="middle" class="lbl" style="fill:var(--bg)" data-r="val">--</text>
+      </svg>`;
+      const q = (k) => box.querySelector(`[data-r="${k}"]`), N = 60, data = []; let last = null, label = null;
+      const Y = (v) => 98 - 68 * (clamp(v, min, max) - min) / (max - min || 1);
+      if (hi != null) { q("hi").setAttribute("y1", Y(hi)); q("hi").setAttribute("y2", Y(hi)); q("hit").setAttribute("y", Y(hi) - 2); }
+      if (lo != null) { q("lo").setAttribute("y1", Y(lo)); q("lo").setAttribute("y2", Y(lo)); q("lot").setAttribute("y", Y(lo) + 9); }
+      const draw = () => {
+        const pts = data.map((v, i) => `${(40 + 166 * (i + N - data.length) / (N - 1)).toFixed(1)},${Y(v).toFixed(1)}`); q("line").setAttribute("points", pts.join(" "));
+        if (data.length) { const v = data[data.length - 1]; q("dot").setAttribute("cx", 206); q("dot").setAttribute("cy", Y(v));
+          const alarm = (hi != null && v >= hi) ? "HIGH" : (lo != null && v <= lo) ? "LOW" : "";
+          q("val").textContent = (label ?? (fmt(v, decimals) + " " + unit));
+          q("say").textContent = alarm ? `${alarm} alarm!` : `${tag} ${label ?? fmt(v, decimals) + unit}`;
+          q("say").style.fill = alarm ? "var(--bad)" : "var(--ink)"; q("bub").setAttribute("stroke", alarm ? "var(--bad)" : "var(--ink)");
+          q("mouth").setAttribute("d", alarm ? "M263 52 q5 -4 10 0" : "M263 50 q5 4 10 0"); }
+      };
+      ctx.every(400, () => { if (last != null) { data.push(last); if (data.length > N) data.shift(); draw(); } });
+      return { push(v, text) { last = v; label = text ?? null; data.push(v); if (data.length > N) data.shift(); draw(); } };
+    }
+  };
+  return ctx;
+}
+/* Reference examples: module 1, cards 3 and 4 */
+INTERACT.m1 = INTERACT.m1 || [];
+INTERACT.m1[2] = {
+  art: `<svg class="art" viewBox="0 0 320 200" role="img" aria-label="A boiler steam drum over a firebox. A level transmitter reads drum level, the level controller compares it to setpoint and drives the feedwater valve.">
+<defs><clipPath id="m1c3-d"><rect x="60" y="30" width="170" height="60" rx="30"/></clipPath>
+<marker id="m1c3-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="var(--accent)" stroke="none"/></marker></defs>
+<path d="M120 31 V9" fill="none" stroke="var(--ink)" stroke-width="7"/><path d="M120 31 V9" fill="none" stroke="var(--surface)" stroke-width="4"/>
+<path d="M120 30 V9" fill="none" stroke="var(--muted)" stroke-width="2" class="flow"/>
+<text x="114" y="18" text-anchor="end" class="sm">steam out</text>
+<g data-tip="Tubes run from the drum down through the fire. If the level drops too low, the tubes run dry and overheat.">
+<path d="M100 88 V150 M125 90 V150 M150 90 V150 M175 90 V150 M200 88 V150" fill="none" stroke="var(--accent)" stroke-width="3"/>
+<rect x="80" y="150" width="140" height="38" rx="3" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
+<g class="pulse"><path d="M104 182 C96 172 104 166 106 158 C112 166 116 174 110 182 Z M144 182 C136 170 146 164 150 156 C156 166 158 174 152 182 Z M186 182 C178 172 186 166 188 158 C194 166 198 174 192 182 Z" fill="var(--tag)" stroke="none"/></g>
+<text x="232" y="178" class="sm">firebox</text></g>
+<rect x="60" y="30" width="170" height="60" rx="30" fill="var(--surface)" stroke="none"/>
+<g clip-path="url(#m1c3-d)" data-tip="Drum level rises and falls as water boils off and feedwater comes in. The dashed line is the setpoint the controller holds.">
+<rect id="bdW" x="56" y="60" width="180" height="40" fill="var(--accent-soft)" stroke="none"/>
+<path id="bdS" d="M56 60 H236" fill="none" stroke="var(--accent)" stroke-width="2"/>
+<path d="M70 60 H222" fill="none" stroke="var(--tag)" stroke-width="1.5" stroke-dasharray="4 3"/>
+</g>
+<rect x="60" y="30" width="170" height="60" rx="30" fill="none" stroke="var(--ink)" stroke-width="2"/>
+<text x="145" y="48" text-anchor="middle" class="lbl">STEAM DRUM</text>
+<text x="64" y="57" class="sm" style="fill:var(--tag)">SP</text>
+<path d="M314 75 H302" fill="none" stroke="var(--ink)" stroke-width="7"/><path d="M314 75 H302" fill="none" stroke="var(--accent-soft)" stroke-width="4"/>
+<path d="M278 75 H227" fill="none" stroke="var(--ink)" stroke-width="7"/><path d="M278 75 H227" fill="none" stroke="var(--accent-soft)" stroke-width="4"/>
+<path id="bdF" d="M278 75 H229" fill="none" stroke="var(--accent)" stroke-width="2" class="flow"/>
+<text x="270" y="96" text-anchor="middle" class="sm">feedwater in</text><text x="290" y="108" text-anchor="middle" class="lbl" id="bdV">LV 50%</text><rect x="140" y="4" width="86" height="15" rx="3" fill="var(--surface)" stroke="var(--tag)" stroke-width="1.5"/><text x="166" y="15" text-anchor="middle" class="lbl" id="bdL">50%</text><text x="206" y="15" text-anchor="middle" class="sm" id="bdmA" style="fill:var(--ink)">12.0 mA</text>
+<g data-tip="LV, the level valve on the feedwater line. Level drops, the controller opens it a little more. Level rises, it closes a little.">
+<polygon points="278,66 278,84 290,75" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
+<polygon points="302,66 302,84 290,75" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
+<path d="M290 75 V60" fill="none" stroke="var(--ink)" stroke-width="2"/>
+<path d="M279 60 A11 8 0 0 1 301 60 Z" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/></g>
+<g data-tip="LT, the level transmitter, measures the drum level and sends it to the controller as the PV.">
+<path d="M200 31 V22 H229" fill="none" stroke="var(--ink)" stroke-width="1.5"/>
+<circle cx="240" cy="22" r="11" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
+<text x="240" y="26" text-anchor="middle" class="lbl">LT</text></g>
+<path d="M251 22 H276" fill="none" stroke="var(--accent)" stroke-width="1.8" class="flow" marker-end="url(#m1c3-ar)"/>
+<g data-tip="LIC, the level indicating controller, compares the level to setpoint and decides how far to open the valve.">
+<rect x="277" y="9" width="26" height="26" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
+<circle cx="290" cy="22" r="12" fill="none" stroke="var(--ink)" stroke-width="1.5"/>
+<text x="290" y="25.5" text-anchor="middle" class="lbl" style="font-size:9px">LIC</text></g>
+<path d="M290 35 V50" fill="none" stroke="var(--accent)" stroke-width="1.8" class="flow" marker-end="url(#m1c3-ar)"/>
+<text x="8" y="118" class="lbl" style="fill:var(--bad)">Too low:</text>
+<text x="8" y="130" class="sm">tubes overheat</text>
+<text x="232" y="122" class="lbl" style="fill:var(--bad)">Too high:</text>
+<text x="232" y="134" class="sm">water in steam</text>
+</svg>`,
+  run(ctx) {
+    const s = ctx.state; s.level = 50; s.sp = 50; s.steam = 50; s.mode = "auto"; s.out = 50; s.integ = 0; s.dragging = false; s.excursion = false;
+    const yOf = (p) => 88 - 56 * p / 100;
+    const hd = ctx.handle(200, yOf(50), "drag the water");
+    const hist = ctx.historian({ tag: "LI-101", unit: "%", hi: 80, lo: 20 });
+    const ro = ctx.readouts([{ key: "lt", label: "LT-101 reads" }, { key: "ma", label: "Signal" }, { key: "lv", label: "Feedwater valve" }]);
+    const render = () => {
+      const y = yOf(s.level); ctx.attr("#bdW", "y", y); ctx.attr("#bdW", "height", 100 - y); ctx.attr("#bdS", "d", `M56 ${y} H236`); ctx.place(hd, 200, y);
+      const mA = 4 + 16 * s.level / 100, alarm = s.level >= 80 ? "bad" : s.level <= 20 ? "bad" : "ok";
+      ctx.text("#bdL", fmt(s.level, 0) + "%"); ctx.text("#bdmA", fmt(mA, 1) + " mA"); ctx.text("#bdV", "LV " + fmt(s.out, 0) + "%");
+      ctx.style("#bdF", "animationDuration", clamp(60 / Math.max(s.out, 1), 0.4, 6) + "s"); ctx.style("#bdF", "opacity", s.out < 2 ? ".2" : "1");
+      ro.set("lt", fmt(s.level, 1) + " %", alarm); ro.set("ma", fmt(mA, 2) + " mA"); ro.set("lv", fmt(s.out, 0) + "% open" + (s.mode === "manual" ? " (manual)" : ""));
+      hist.push(s.level);
+      if (s.level <= 20) ctx.say("<b>Low level alarm.</b> Too little water and the boiler tubes overheat. In Auto, the controller is opening the feedwater valve to catch up.", "bad");
+      else if (s.level >= 80) ctx.say("<b>High level alarm.</b> Too much water and it carries over into the steam line. The controller is closing the feedwater valve.", "bad");
+      else if (s.mode === "manual") ctx.say("<b>Manual:</b> the valve stays where it is. If steam demand doesn't match feedwater, the level drifts and nobody corrects it.", "warn");
+      else ctx.say(`Level ${fmt(s.level, 0)}% → transmitter sends ${fmt(mA, 1)} mA → controller compares to setpoint ${s.sp}% → valve ${fmt(s.out, 0)}% open.`, "info");
+    };
+    ctx.drag(hd, { axis: "y", min: 32, max: 88, onMove: (y) => { s.dragging = true; s.level = clamp((88 - y) / 56 * 100, 0, 100); if (s.level < 20 || s.level > 80) s.excursion = true; s.min = Math.min(s.min ?? 100, s.level); s.max = Math.max(s.max ?? 0, s.level); render(); }, keyStep: (d) => { s.level = clamp(s.level - d * 5, 0, 100); render(); } });
+    ctx.svg.addEventListener("pointerup", () => { s.dragging = false; });
+    hd.addEventListener("pointerup", () => { s.dragging = false; });
+    ctx.toggle({ label: "Controller mode", options: [{ label: "Auto", value: "auto" }, { label: "Manual", value: "manual" }], value: "auto", onChange: (v) => { s.mode = v; s.integ = s.out - 50 - 2 * (s.sp - s.level); render(); } });
+    ctx.slider({ label: "Steam demand", min: 20, max: 80, step: 1, value: 50, fmt: (v) => v + "%", onInput: (v) => { s.steam = v; } });
+    ctx.every(150, () => {
+      if (!s.dragging) {
+        if (s.mode === "auto") { const e = s.sp - s.level; s.integ = clamp(s.integ + e * 0.02, -50, 50); s.out = clamp(50 + 2 * e + s.integ, 0, 100); }
+        s.level = clamp(s.level + (s.out - s.steam) * 0.03, 0, 100);
+        if (s.mode === "manual" && Math.abs(s.level - s.sp) > 15) s.drifted = true;
+        if (s.excursion && s.mode === "auto" && Math.abs(s.level - s.sp) < 3) s.recovered = true;
+      } else if (s.mode === "auto") { const e = s.sp - s.level; s.out = clamp(50 + 2 * e + s.integ, 0, 100); }
+      render();
+    });
+    ctx.tasks([
+      { text: "Drag the water down below 20%. Watch the operator's IP21 screen go into low alarm.", check: (s) => (s.min ?? 100) < 20 },
+      { text: "Drag it above 80% to get a high alarm.", check: (s) => (s.max ?? 0) > 80 },
+      { text: "Let go in Auto and watch the controller bring the level back to 50%.", check: (s) => s.recovered },
+      { text: "Switch to Manual and change steam demand. Watch the level drift away with nobody correcting it.", check: (s) => s.drifted }
+    ]);
+    render();
+  }
+};
+INTERACT.m1[3] = {
+  art: `<svg class="art" viewBox="0 0 320 200" role="img" aria-label="Three signal rulers aligned by percent: 3 to 15 psi pneumatic, 4 to 20 milliamp analog with 0 milliamps marked as a broken wire, and digital packets.">
+<text x="90" y="16" text-anchor="middle" class="sm">0%</text><text x="140" y="16" text-anchor="middle" class="sm">25%</text><text x="190" y="16" text-anchor="middle" class="sm">50%</text><text x="240" y="16" text-anchor="middle" class="sm">75%</text><text x="290" y="16" text-anchor="middle" class="sm">100%</text>
+<path d="M90 20 V122 M140 20 V122 M190 20 V122 M240 20 V122 M290 20 V122" fill="none" stroke="var(--line)" stroke-width="1" stroke-dasharray="2 3"/>
+<g data-tip="Pneumatic: 3 psi of instrument air = 0%, 15 psi = 100%. Still common on valve positioners and older loops.">
+<text x="8" y="40" class="lbl">Pneumatic</text><text x="72" y="40" class="sm">air, psi</text>
+<path d="M40 54 H90" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="3 3"/>
+<path d="M90 54 H290" fill="none" stroke="var(--accent)" stroke-width="4"/>
+<path d="M90 49 V59 M140 50 V58 M190 49 V59 M240 50 V58 M290 49 V59 M40 50 V58" fill="none" stroke="var(--ink)" stroke-width="1.5"/>
+<text x="40" y="70" text-anchor="middle" class="sm">0</text><text x="90" y="70" text-anchor="middle" class="lbl">3</text><text x="140" y="70" text-anchor="middle">6</text><text x="190" y="70" text-anchor="middle">9</text><text x="240" y="70" text-anchor="middle">12</text><text x="290" y="70" text-anchor="middle" class="lbl">15</text></g>
+<g data-tip="Analog electronic: 4 mA = 0%, 20 mA = 100%. The workhorse signal you'll measure every day.">
+<text x="8" y="92" class="lbl">Analog</text><text x="54" y="92" class="sm">current, mA</text>
+<path d="M40 106 H90" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="3 3"/>
+<path d="M90 106 H290" fill="none" stroke="var(--accent)" stroke-width="4"/>
+<path d="M90 101 V111 M140 102 V110 M190 101 V111 M240 102 V110 M290 101 V111" fill="none" stroke="var(--ink)" stroke-width="1.5"/>
+<text x="90" y="122" text-anchor="middle" class="lbl">4</text><text x="140" y="122" text-anchor="middle">8</text><text x="190" y="122" text-anchor="middle">12</text><text x="240" y="122" text-anchor="middle">16</text><text x="290" y="122" text-anchor="middle" class="lbl">20</text></g>
+<g data-tip="Live zero: 0% is 4 mA, not 0. So 0 mA can only mean trouble, like a broken wire or a dead supply.">
+<circle cx="40" cy="106" r="5" fill="var(--bad-soft)" stroke="var(--bad)" stroke-width="2" class="pulse"/>
+<text x="40" y="122" text-anchor="middle" class="lbl" style="fill:var(--bad)">0</text>
+<text x="40" y="134" text-anchor="middle" class="sm" style="fill:var(--bad)">broken wire</text></g>
+<g id="sgP"><polygon points="-5,-6 5,-6 0,1" fill="var(--tag)" stroke="var(--ink)" stroke-width="1"/></g><g id="sgA"><polygon points="-5,-6 5,-6 0,1" fill="var(--tag)" stroke="var(--ink)" stroke-width="1"/></g>
+<rect x="232" y="26" width="80" height="16" rx="3" fill="var(--surface)" stroke="var(--tag)" stroke-width="1.5"/><text x="272" y="38" text-anchor="middle" class="lbl" id="sgPv">9.00 psi</text>
+<rect x="232" y="78" width="80" height="16" rx="3" fill="var(--surface)" stroke="var(--tag)" stroke-width="1.5"/><text x="272" y="90" text-anchor="middle" class="lbl" id="sgAv">12.00 mA</text>
+<g data-tip="Digital signals send numbers as data packets, not as a level. HART, FOUNDATION Fieldbus, wireless and Modbus all work this way.">
+<text x="8" y="154" class="lbl">Digital</text><text x="62" y="154" class="sm">HART · FF · wireless · Modbus</text>
+<path d="M40 174 H300" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+<g id="sgD"><rect x="44" y="164" width="120" height="20" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/><text x="104" y="178" text-anchor="middle" class="lbl" id="sgDv">PV = 50.0 %</text><rect x="172" y="164" width="120" height="20" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/><text x="232" y="178" text-anchor="middle" class="sm" id="sgDb" style="fill:var(--ink)">0111 1111 1111</text><animateTransform attributeName="transform" type="translate" values="0 0;4 0;0 0" dur="1.2s" repeatCount="indefinite"/></g></g>
+</svg>`,
+  run(ctx) {
+    const s = ctx.state; s.pct = 50; s.wire = "ok";
+    const X = (p) => 90 + 2 * p, hd = ctx.handle(X(50), 28, "drag");
+    const render = () => {
+      const x = X(s.pct), psi = 3 + 12 * s.pct / 100, mA = s.wire === "ok" ? 4 + 16 * s.pct / 100 : 0;
+      ctx.place(hd, x, 28); ctx.attr("#sgP", "transform", `translate(${x} 48)`); ctx.attr("#sgA", "transform", `translate(${s.wire === "ok" ? x : 40} 100)`);
+      ctx.text("#sgPv", fmt(psi, 2) + " psi"); ctx.text("#sgAv", fmt(mA, 2) + " mA"); ctx.style("#sgAv", "fill", s.wire === "ok" ? "var(--ink)" : "var(--bad)");
+      ctx.text("#sgDv", s.wire === "ok" ? `PV = ${fmt(s.pct, 1)} %` : "NO COMM");
+      const raw = Math.round(s.pct / 100 * 4095).toString(2).padStart(12, "0"); ctx.text("#sgDb", s.wire === "ok" ? raw.replace(/(.{4})/g, "$1 ").trim() : "---- ---- ----");
+      if (s.wire !== "ok") ctx.say("<b>Broken wire:</b> the analog signal drops to 0 mA, below the 4 mA live zero, so the control system knows it's a fault and not a real 0%. The digital signal loses communication too.", "bad");
+      else ctx.say(`<b>${fmt(s.pct, 0)}%</b> is the same reading three ways: ${fmt(psi, 1)} psi of air, ${fmt(4 + 16 * s.pct / 100, 1)} mA of current, or a digital number.`, "info");
+    };
+    ctx.drag(hd, { axis: "x", min: 90, max: 290, onMove: (x) => { s.pct = (x - 90) / 2; sl.set(Math.round(s.pct)); }, keyStep: (d) => sl.set(clamp(s.pct + d * 5, 0, 100)) });
+    const sl = ctx.slider({ label: "Process at", min: 0, max: 100, step: 1, value: 50, fmt: (v) => v + "%", onInput: (v) => { s.pct = v; if (Math.abs(v - 25) < 1) s.saw25 = true; if (v >= 99.5) s.saw100 = true; if (v <= 0.5) s.saw0 = true; render(); } });
+    ctx.toggle({ label: "Signal wire", options: [{ label: "Connected", value: "ok" }, { label: "Cut the wire", value: "cut" }], value: "ok", onChange: (v) => { s.wire = v; if (v === "cut") s.cut = true; render(); } });
+    ctx.tasks([
+      { text: "Set the process to 25%. What does the 4–20 mA loop read? (Answer: 8 mA)", check: (s) => s.saw25 },
+      { text: "Slide down to 0%. Notice the loop still reads 4 mA, not 0.", check: (s) => s.saw0 },
+      { text: "Go all the way to 100%: 15 psi and 20 mA.", check: (s) => s.saw100 },
+      { text: "Cut the wire and see how a fault looks different from a real 0%.", check: (s) => s.cut }
+    ]);
+    render();
+  }
+};
+
 const h = (tag, attrs = {}, ...kids) => {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
@@ -3118,10 +3400,12 @@ function renderModule(m) {
     drawSteps(); body.innerHTML = "";
     if (stage < m.cards.length) {
       const c = m.cards[stage];
-      const art = ART[m.id]?.[stage] ? fig(ART[m.id][stage]) : null, tip = art ? fig(`<div class="tipbox" hidden></div>`) : null;
-      body.append(h("div", { class: "sheet" }, h("div", { class: "cn" }, `LESSON ${stage + 1} OF ${m.cards.length}`), h("h2", {}, c.h), art, tip, h("div", { html: c.b })),
+      const spec = INTERACT[m.id]?.[stage], src = spec?.art || ART[m.id]?.[stage];
+      const art = src ? fig(src) : null, tip = art ? fig(`<div class="tipbox" hidden></div>`) : null, ihost = spec ? h("div", { class: "ihost" }) : null;
+      body.append(h("div", { class: "sheet" }, h("div", { class: "cn" }, `LESSON ${stage + 1} OF ${m.cards.length}`, spec ? h("span", { class: "cardtag" }, "INTERACTIVE") : ""), h("h2", {}, c.h), art, tip, ihost, h("div", { html: c.b })),
         h("div", { class: "nav" }, h("button", { class: "btn", disabled: stage === 0 ? "" : false, onclick: () => { stage--; show(); scrollTo(0, 0); } }, "Back"),
           h("button", { class: "btn primary grow", onclick: () => { stage++; show(); scrollTo(0, 0); } }, stage === m.cards.length - 1 ? "Try it yourself" : "Next")));
+      if (spec) mountInteractive(m.id, stage, art, ihost);
       if (art) { hookTips(art, tip); if (matchMedia("(prefers-reduced-motion: reduce)").matches) art.pauseAnimations?.(); }
     } else if (stage === m.cards.length) {
       const wroot = h("div", { class: "widget" });
