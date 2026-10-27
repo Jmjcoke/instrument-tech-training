@@ -2546,6 +2546,14 @@ function makeCtx(svg, host, key) {
       ctl.append(label ? h("div", { class: "field" }, h("span", { class: "ilabel" }, label), seg) : seg); render(); setTimeout(() => onChange && (onChange(cur), ctx.update()), 0);
       return { value: () => cur, set(v) { cur = v; render(); onChange && onChange(cur); ctx.update(); } };
     },
+    /* tap alternative to dragging: a row of buttons. onPick(value) on tap; .mark(value) highlights without firing */
+    choices({ label, options, value = null, onPick }) {
+      const seg = h("div", { class: "seg ichoices" }); let cur = value;
+      const paint = () => [...seg.children].forEach((b, i) => b.classList.toggle("sel", options[i].value === cur));
+      options.forEach(o => seg.append(h("button", { type: "button", onclick: () => { cur = o.value; paint(); onPick && onPick(o.value); ctx.update(); } }, o.label)));
+      ctl.append(h("div", { class: "field" }, h("span", { class: "ilabel" }, label), seg)); paint();
+      return { mark(v) { cur = v; paint(); } };
+    },
     button(label, onClick, cls = "") { const b = h("button", { type: "button", class: "btn small " + cls, onclick: () => { onClick(); ctx.update(); } }, label); (ctl.querySelector(".ibtns") || ctl.appendChild(h("div", { class: "ibtns" }))).append(b); return b; },
     /* readout tiles: ctx.readouts([{key:"ma",label:"Loop current"}]) then r.set("ma","12.0 mA","ok") */
     readouts(list) {
@@ -2567,6 +2575,10 @@ function makeCtx(svg, host, key) {
     /* pointer drag in viewBox units. opts: {axis:"x"|"y"|"xy", min, max, minY, maxY, onMove(v or {x,y})} */
     drag(el, opts) {
       el.classList.add("idrag"); el.setAttribute("tabindex", "0"); el.setAttribute("role", "slider");
+      /* Android Chrome ignores touch-action on SVG shapes and scrolls the page instead of dragging; stop that here */
+      el.style.touchAction = "none";
+      el.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
+      el.addEventListener("touchmove", (e) => e.preventDefault(), { passive: false });
       const toSvg = (e) => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); };
       const lo = opts.min ?? 0, hi = opts.max ?? 320;
       const emit = (p) => { if (opts.axis === "xy") opts.onMove({ x: clamp(p.x, opts.min ?? 0, opts.max ?? 320), y: clamp(p.y, opts.minY ?? 0, opts.maxY ?? 240) }); else opts.onMove(clamp(opts.axis === "x" ? p.x : p.y, lo, hi)); ctx.update(); svg.querySelectorAll(".ihint").forEach(n => n.remove()); };
@@ -2574,6 +2586,7 @@ function makeCtx(svg, host, key) {
       el.addEventListener("pointerdown", (e) => { on = true; el.setPointerCapture(e.pointerId); e.preventDefault(); emit(toSvg(e)); });
       el.addEventListener("pointermove", (e) => { if (on) emit(toSvg(e)); });
       el.addEventListener("pointerup", () => { on = false; }); el.addEventListener("pointercancel", () => { on = false; });
+      el.addEventListener("lostpointercapture", () => { on = false; });
       el.addEventListener("keydown", (e) => { if (!opts.keyStep || opts.axis === "xy") return; const d = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 }[e.key]; if (!d) return; e.preventDefault(); opts.keyStep(opts.axis === "y" ? d : -(-d)); ctx.update(); });
     },
     /* a visible grab handle with pulsing ring + "drag" hint at (x,y). Returns the <g>; move it with ctx.place(g,x,y) */
@@ -3019,11 +3032,18 @@ function probes(ctx, { pts, jacks, park, onChange, snap = 18, hint = "drag the p
   const move = (i, x, y) => {
     let best = null, bd = snap;
     pts.forEach((p, k) => { const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = k; } });
-    at[i] = best; pos[i] = best == null ? [x, y] : [pts[best].x, pts[best].y]; draw(); onChange && onChange();
+    at[i] = best; pos[i] = best == null ? [x, y] : [pts[best].x, pts[best].y]; draw(); rows[i].mark(best); onChange && onChange();
   };
+  /* tap buttons as an alternative to dragging (some Android phones won't drag) */
+  const names = pts.map(p => p.n), uniq = new Set(names).size === names.length;
+  const lbl = (k) => uniq ? names[k] : `${k + 1} (${names[k]})`;
+  if (!uniq) pts.forEach((p, k) => { const b = el(ctx, "g", {}); b.innerHTML = `<circle cx="${p.x - 11}" cy="${p.y - 11}" r="6.5" fill="var(--tag)" stroke="var(--ink)" stroke-width="1"/><text x="${p.x - 11}" y="${p.y - 8}" text-anchor="middle" style="font-size:8px;font-weight:700;fill:var(--tag-ink)">${k + 1}</text>`; });
+  const isClip = /clip/.test(hint);
+  const rows = [0, 1].map(i => ctx.choices({ label: isClip ? `Or tap: clip ${i + 1} on` : `Or tap: ${i === 0 ? "red" : "black"} lead on`, options: [...pts.map((p, k) => ({ label: lbl(k), value: k })), { label: "Off", value: null }], value: null, onPick: (k) => setAt(i, k) }));
+  const setAt = (i, k) => { if (k == null) { at[i] = null; pos[i] = park[i].slice(); draw(); onChange && onChange(); } else move(i, pts[k].x, pts[k].y); };
   hs.forEach((g, i) => ctx.drag(g, { axis: "xy", min: 8, max: 312, minY: 8, maxY: ctx.svg.viewBox.baseVal.height - 18, onMove: (p) => move(i, p.x, p.y) }));
   draw();
-  return { at, set(i, k) { if (k == null) { at[i] = null; pos[i] = park[i].slice(); draw(); } else move(i, pts[k].x, pts[k].y); onChange && onChange(); } };
+  return { at, set(i, k) { if (k == null) { at[i] = null; pos[i] = park[i].slice(); draw(); rows[i].mark(null); } else move(i, pts[k].x, pts[k].y); onChange && onChange(); } };
 }
 
 INTERACT.m2 = [
@@ -3179,6 +3199,8 @@ INTERACT.m2 = [
     const pick = (x, y) => { let best = "park", bd = 1e9; for (const k in SL) { const d = Math.hypot(SL[k][0] - x, SL[k][1] - y); if (d < bd) { bd = d; best = k; } } if (best !== s.slot) { s.slot = best; render(); } };
     ctx.drag(hd, { axis: "xy", min: 20, max: 300, minY: 20, maxY: 200, onMove: (p) => pick(p.x + 30, p.y + 26) });
     ctx.drag(ctx.$("#m2c2-m"), { axis: "xy", min: 20, max: 300, minY: 20, maxY: 200, onMove: (p) => pick(p.x, p.y) });
+    const place = ctx.choices({ label: "Or tap: put the meter", options: [{ label: "In the break (series)", value: "series" }, { label: "Across the supply", value: "across" }, { label: "Off to the side", value: "park" }], value: s.slot, onPick: (v) => { s.slot = v; render(); } });
+    ctx.watch(() => place.mark(s.slot));
     ctx.toggle({ label: "Meter dial set to", options: [{ label: "mA (amps)", value: "mA" }, { label: "V DC (volts)", value: "V" }], value: "mA", onChange: (v) => { s.mode = v; render(); } });
     ctx.button("Replace fuse", () => { if (!s.fuse) { s.fuse = true; if (s.blown) s.t3 = true; if (s.slot === "across" && s.mode === "mA") s.slot = "park"; } render(); });
     ctx.button("Park the meter", () => { s.slot = "park"; render(); });
@@ -3474,7 +3496,13 @@ function probes(ctx, { pts, jacks, park, onChange, snap = 18, hint = "drag a cli
     return g;
   });
   const draw = () => [0, 1].forEach((i) => { const [jx, jy] = jacks[i], [px, py] = pos[i]; leads[i].setAttribute("d", `M${jx} ${jy} C${jx} ${jy + 24} ${px} ${py + 30} ${px} ${py + 12}`); ctx.place(hs[i], px, py); });
-  const move = (i, x, y) => { let best = null, bd = snap; pts.forEach((p, k) => { const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = k; } }); at[i] = best; pos[i] = best == null ? [x, y] : [pts[best].x, pts[best].y]; draw(); onChange && onChange(); };
+  const move = (i, x, y) => { let best = null, bd = snap; pts.forEach((p, k) => { const d = Math.hypot(p.x - x, p.y - y); if (d < bd) { bd = d; best = k; } }); at[i] = best; pos[i] = best == null ? [x, y] : [pts[best].x, pts[best].y]; draw(); rows[i].mark(best); onChange && onChange(); };
+  /* tap buttons as an alternative to dragging (some Android phones won't drag) */
+  const names = pts.map(p => p.n), uniq = new Set(names).size === names.length;
+  const lbl = (k) => uniq ? names[k] : `${k + 1} (${names[k]})`;
+  if (!uniq) pts.forEach((p, k) => { const b = el(ctx, "g", {}); b.innerHTML = `<circle cx="${p.x - 11}" cy="${p.y - 11}" r="6.5" fill="var(--tag)" stroke="var(--ink)" stroke-width="1"/><text x="${p.x - 11}" y="${p.y - 8}" text-anchor="middle" style="font-size:8px;font-weight:700;fill:var(--tag-ink)">${k + 1}</text>`; });
+  const rows = [0, 1].map(i => ctx.choices({ label: `Or tap: ${i === 0 ? "red" : "black"} clip on`, options: [...pts.map((p, k) => ({ label: lbl(k), value: k })), { label: "Off", value: null }], value: null,
+    onPick: (k) => { if (k == null) { at[i] = null; pos[i] = park[i].slice(); draw(); onChange && onChange(); } else move(i, pts[k].x, pts[k].y); } }));
   hs.forEach((g, i) => ctx.drag(g, { axis: "xy", min: 8, max: 312, minY: 8, maxY: ctx.svg.viewBox.baseVal.height - 16, onMove: (p) => move(i, p.x, p.y) }));
   draw();
   return { at, set(i, k) { move(i, pts[k].x, pts[k].y); } };
@@ -7500,6 +7528,11 @@ INTERACT.m11 = [
     ctx.$("#m11c5-dial").style.cursor = "pointer"; ctx.$("#m11c5-dial").addEventListener("click", () => mt.set(s.mode === "mA" ? "V" : "mA"));
     ctx.toggle({ label: "SIGNAL + wire", options: [{ label: "Landed", value: false }, { label: "Lift it (break the loop)", value: true }], value: false, onChange: (v) => { s.lift = v; if (!v) { [s.r, s.b].forEach(t => { if (t.n === "W") { t.n = null; t.x = t === s.r ? 232 : 276; t.y = 196; } }); } render(); } });
     ctx.button("Park the leads", () => { s.r = { x: 232, y: 196, n: null }; s.b = { x: 276, y: 196, n: null }; render(); });
+    /* tap alternative to dragging the leads */
+    const NAME = (k) => k === "W" ? "lifted wire end" : k;
+    const leadRows = ["r", "b"].map(w => ctx.choices({ label: `Or tap: ${w === "r" ? "red" : "black"} lead on`, options: Object.keys(NODES).map(k => ({ label: NAME(k), value: k })), value: null,
+      onPick: (k) => { if (k === "W" && !s.lift) { ctx.say("Lift the SIGNAL + wire first, then you can clip onto its end.", "warn"); return; } s[w] = { x: NODES[k][0], y: NODES[k][1], n: k }; render(); } }));
+    ctx.watch(() => { leadRows[0].mark(s.r.n); leadRows[1].mark(s.b.n); });
     // spot-the-mistake set
     const ITEMS = [
       ["LI-101 reads 0%. The tech swaps the transmitter, then the barrier, then the AI card until it works.", true, "Shotgunning. It wastes parts and time, and you never learn the real cause. Measure first."],
