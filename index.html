@@ -230,6 +230,13 @@ canvas{width:100%;display:block;background:var(--bg);border-radius:8px;border:1p
 .fbseg button.sel.fb-wrong{border-color:var(--bad);background:var(--bad-soft)}
 .akey{margin-top:10px}.akey ol{margin:0 0 6px}.akright{font-weight:700;color:var(--ok)}
 .fbsub summary{cursor:pointer;padding:4px 0}
+
+.book{display:grid;gap:8px}
+.bookbtn .btn{min-height:40px}
+.chlist{display:grid;border-top:1px solid var(--line)}
+.chlist a{display:grid;grid-template-columns:2.2em 1fr auto;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line);text-decoration:none;color:var(--ink)}
+.chlist a:hover span:nth-child(2){color:var(--accent)}
+.mono-sm{font-family:var(--mono);font-weight:700;font-size:.8rem;color:var(--muted)}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -287,7 +294,7 @@ const MODULES = [
 {
   id: "m3", tag: "03", code: "4-20", title: "The 4–20 mA Loop",
   sub: "The signal you'll measure every day.",
-  ch: "Ch. 13, Analog Electronic Instrumentation · HART: Ch. 15.10", pages: "863–916, 1093–1110",
+  ch: "Ch. 13, Analog Electronic Instrumentation · HART: Ch. 15.10", pages: "863–916, 1093–1107",
   cards: [
     { h: "Why use current instead of voltage?", b: `<p>A voltage signal loses some of itself to wire resistance on long cable runs. A <b>current</b> signal doesn't. In a series loop the same current flows everywhere, so every device reads the same signal no matter how long the wire is.</p><p>That's why 4–20 mA became the standard. It's simple, it tolerates noise, and it carries a live zero.</p>` },
     { h: "2-wire (loop-powered) transmitters", b: `<p>Most field transmitters are <b>2-wire</b>. The same two wires carry both the power and the signal. A 24 VDC supply in the control room pushes current around the loop. The transmitter acts like a valve on that current, letting through just the right amount for its reading.</p><p>A <b>4-wire</b> transmitter has its own separate power, like 120 VAC, and produces the current itself. Mixing up the two types can short a supply.</p>` },
@@ -8238,6 +8245,9 @@ const ARTIFACT_URL = "https://jmjcoke.github.io/instrument-tech-training/";  // 
 const PUBLIC_COPY = true;
 const TRAINER_PHONE = "";     // optional: trainer's mobile number for the Text button
 const PASS = 75;
+const BOOK_URL = "https://www.ibiblio.org/kuphaldt/socratic/sinst/book/liii.pdf";
+const CH_MB = { m1: 1.6, m2: 1.2, m3: 2.1, m4: 1.0, m5: 0.6, m6: 6.7, m7: 2.3, m8: 9.8, m9: 11.3, m10: 16.8, m11: 4.0 };
+const chapterLink = (m, cls = "btn small") => h("a", { class: cls, href: `${ARTIFACT_URL}chapters/${m.id}.pdf`, target: "_blank", rel: "noopener" }, `Read the chapter (PDF, ${CH_MB[m.id]} MB)`);
 const COURSE = "Instrument Tech Fundamentals";
 
 /* ---------- per-device progress (convenience only) ---------- */
@@ -8307,6 +8317,10 @@ function renderHome() {
         : !b ? h("span", { class: "chip new" }, "Not started") : b.pct >= PASS ? h("span", { class: "chip ok" }, `Passed ${b.pct}%`) : h("span", { class: "chip bad" }, `Best ${b.pct}%`);
       return h("a", { class: "mod", href: "#" + m.id, onclick: (e) => { e.preventDefault(); go(m.id); } }, bubble(m), h("div", { class: "txt" }, h("div", { class: "t" }, m.title), h("div", { class: "s" }, m.sub), chip));
     })),
+    h("div", { class: "section textbook" }, h("h2", {}, "The textbook"),
+      h("p", { class: "small", style: "margin:0" }, "Every module is built from ", h("i", {}, "Lessons in Industrial Instrumentation"), " by Tony R. Kuphaldt, a free textbook used in 2-year instrument tech programs. Each module has a button to read its chapters. The page numbers printed on those pages match the book."),
+      h("div", { class: "chlist" }, ...MODULES.map(m => h("a", { href: `${ARTIFACT_URL}chapters/${m.id}.pdf`, target: "_blank", rel: "noopener" }, h("span", { class: "mono-sm" }, m.tag), h("span", {}, m.title), h("span", { class: "small muted" }, CH_MB[m.id] + " MB")))),
+      h("a", { class: "btn", href: BOOK_URL, target: "_blank", rel: "noopener" }, "Download the whole book (about 100 MB, 3,300 pages)"), h("p", { class: "small muted", style: "margin:0" }, "The whole book is big. Download it on Wi-Fi, or read the chapter PDFs instead.")),
     h("p", { class: "foot" }, "Lessons are based on ", h("a", { href: "https://www.ibiblio.org/kuphaldt/socratic/sinst/", target: "_blank", rel: "noopener" }, "Lessons in Industrial Instrumentation"), " by Tony R. Kuphaldt (v2.33), used under the Creative Commons Attribution 4.0 license. Page numbers refer to the printed page numbers in that book. Always follow your site's procedures and your supervisor's direction in the field."));
 }
 
@@ -8317,7 +8331,7 @@ function renderModule(m) {
   let stage = 0; // 0..cards.length-1 lesson, cards.length = widget, cards.length+1 = quiz
   const head = h("div", {}, topbar(h("button", { class: "linkbtn", onclick: () => go("home") }, "All modules")),
     h("div", { class: "mhead" }, bubble(m, true), h("div", { class: "txt" }, h("div", { class: "eyebrow" }, "Module " + m.tag), h("h1", {}, m.title))),
-    h("div", { class: "book" }, h("b", {}, "Read more in the book: "), `${m.ch}, pages ${m.pages}`));
+    h("div", { class: "book" }, h("div", {}, h("b", {}, "From the textbook: "), `${m.ch}, pages ${m.pages}`), h("div", { class: "bookbtn" }, chapterLink(m))));
   const steps = h("div", { class: "steps", "aria-hidden": "true" });
   const body = h("div");
   app.append(head, steps, body);
