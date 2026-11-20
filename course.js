@@ -2341,8 +2341,10 @@ function makeCtx(svg, host, key) {
       let on = false;
       el.addEventListener("pointerdown", (e) => { on = true; el.setPointerCapture(e.pointerId); e.preventDefault(); emit(toSvg(e)); });
       el.addEventListener("pointermove", (e) => { if (on) emit(toSvg(e)); });
-      el.addEventListener("pointerup", () => { on = false; }); el.addEventListener("pointercancel", () => { on = false; });
-      el.addEventListener("lostpointercapture", () => { on = false; });
+      /* opts.onEnd() fires once when the drag is released, for figures that snap into place on drop */
+      const end = () => { if (!on) return; on = false; if (opts.onEnd) { opts.onEnd(); ctx.update(); } };
+      el.addEventListener("pointerup", end); el.addEventListener("pointercancel", end);
+      el.addEventListener("lostpointercapture", end);
       el.addEventListener("keydown", (e) => { if (!opts.keyStep || opts.axis === "xy") return; const d = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 }[e.key]; if (!d) return; e.preventDefault(); opts.keyStep(opts.axis === "y" ? d : -(-d)); ctx.update(); });
     },
     /* a visible grab handle with pulsing ring + "drag" hint at (x,y). Returns the <g>; move it with ctx.place(g,x,y) */
@@ -2917,7 +2919,7 @@ INTERACT.m2 = [
     const hd = ctx.handle(SL.park[0] - 30, SL.park[1] - 26, "drag");
     const ro = ctx.readouts([{ key: "m", label: "Meter shows" }, { key: "i", label: "Current in load" }, { key: "f", label: "Meter fuse" }]);
     const leads = () => {
-      const [x, y] = SL[s.slot], bj = [x - 10, y + 22], rj = [x + 10, y + 22];
+      const [x, y] = s.free || SL[s.slot], bj = [x - 10, y + 22], rj = [x + 10, y + 22];
       let b, r;
       if (s.slot === "series") { b = [120, 160]; r = [160, 160]; }
       else if (s.slot === "across") { b = [80, 160]; r = [160, 40]; }
@@ -2961,9 +2963,11 @@ INTERACT.m2 = [
       else msg = `Meter set to <b>${s.mode === "mA" ? "mA" : "volts"}</b>. Drag it into the break in the bottom wire (series) or across the supply, and see what happens.`;
       ctx.say(msg, k);
     };
-    const pick = (x, y) => { let best = "park", bd = 1e9; for (const k in SL) { const d = Math.hypot(SL[k][0] - x, SL[k][1] - y); if (d < bd) { bd = d; best = k; } } if (best !== s.slot) { s.slot = best; render(); } };
-    ctx.drag(hd, { axis: "xy", min: 20, max: 300, minY: 20, maxY: 200, onMove: (p) => pick(p.x + 30, p.y + 26) });
-    ctx.drag(ctx.$("#m2c2-m"), { axis: "xy", min: 20, max: 300, minY: 20, maxY: 200, onMove: (p) => pick(p.x, p.y) });
+    /* the meter follows the pointer while it is dragged (out of the circuit, leads hanging) and snaps to the nearest spot when let go */
+    const follow = (x, y) => { s.free = [clamp(x, 30, 290), clamp(y, 26, 176)]; s.slot = "park"; render(); };
+    const drop = () => { if (!s.free) return; const [x, y] = s.free; s.free = null; let best = "park", bd = 48; for (const k of ["series", "across"]) { const d = Math.hypot(SL[k][0] - x, SL[k][1] - y); if (d < bd) { bd = d; best = k; } } s.slot = best; render(); };
+    ctx.drag(hd, { axis: "xy", min: 0, max: 320, minY: 0, maxY: 210, onMove: (p) => follow(p.x + 30, p.y + 26), onEnd: drop });
+    ctx.drag(ctx.$("#m2c2-m"), { axis: "xy", min: 0, max: 320, minY: 0, maxY: 210, onMove: (p) => follow(p.x, p.y), onEnd: drop });
     const place = ctx.choices({ label: "Or tap: put the meter", options: [{ label: "In the break (series)", value: "series" }, { label: "Across the supply", value: "across" }, { label: "Off to the side", value: "park" }], value: s.slot, onPick: (v) => { s.slot = v; render(); } });
     ctx.watch(() => place.mark(s.slot));
     ctx.toggle({ label: "Meter dial set to", options: [{ label: "mA (amps)", value: "mA" }, { label: "V DC (volts)", value: "V" }], value: "mA", onChange: (v) => { s.mode = v; render(); } });

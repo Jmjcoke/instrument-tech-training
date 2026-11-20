@@ -501,7 +501,10 @@ function hookParts(svg) {
     p.addEventListener("pointerleave", () => { if (pinned) showCallout(pinned); else hideCallout(); });
     p.addEventListener("focus", () => showCallout(p));
     const pin = () => { parts.forEach(q => q.classList.remove("on")); pinned = pinned === p ? null : p; if (pinned) p.classList.add("on"); showCallout(p); };
-    p.addEventListener("click", pin);
+    /* a drag that ends on the part is not a click: only pin when the pointer barely moved */
+    let dn = null;
+    p.addEventListener("pointerdown", (e) => { dn = [e.clientX, e.clientY]; });
+    p.addEventListener("click", (e) => { if (dn && Math.hypot(e.clientX - dn[0], e.clientY - dn[1]) > 6) return; pin(); });
     p.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pin(); } });
   });
   return parts.length;
