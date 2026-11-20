@@ -28,7 +28,7 @@ const MODULES = [
   sub: "Voltage, current, resistance, and finding faults.",
   ch: "Ch. 4, DC Electricity", pages: "291–330",
   cards: [
-    { h: "Voltage: electrical push", b: `<p><b>Voltage (V)</b> is the push that moves electric charge. It's like pressure in a pipe. Voltage is <b>always measured between two points</b>, so your meter needs two leads touching two places.</p><p>Most instrument loops run on <b>24 VDC</b>. Plant power circuits run at 120 VAC, 480 VAC or higher. Know which one you're near before you put a lead down.</p>` },
+    { h: "Voltage: electrical push", b: `<p><b>Voltage (V)</b> is the push that moves electric charge. It's like pressure in a pipe. Voltage is <b>always measured between two points</b>, so your meter needs two leads touching two places.</p><p>Most instrument loops run on <b>24 VDC</b>. Plant power circuits run at 120 VAC, 480 VAC or higher. Know which one you're near before you put a lead down.</p><p><b>480 V is three-phase power.</b> You read about 480 V between any two phases, and about 277 V from one phase to ground on the common 480Y/277 system. Motors built for it say 460 V on the nameplate, and some plant lighting runs on 277 V.</p><p><b>Before a meter goes near plant power:</b> the rule is to de-energize and lock out first. Testing live is only for qualified people wearing shock and arc-flash protection. On a 480 V panel, use a meter and leads rated at least <b>CAT III 600 V</b>, and prove the meter on a known live source before and after you test for dead.</p>` },
     { h: "Current: the flow", b: `<p><b>Current (I)</b> is the flow of charge, measured in amps (A) or milliamps (mA). It's like flow rate in a pipe.</p><p>Current only flows in a <b>complete loop</b>. To measure it, the meter must be <b>in series</b>: you break the circuit and let the current flow through the meter. Putting a meter set to amps across a voltage source makes a short circuit. That blows the meter's fuse, or worse.</p>` },
     { h: "Resistance and Ohm's Law", b: `<p><b>Resistance (R)</b>, in ohms (Ω), is opposition to current. It's like a restriction in a pipe.</p><p class="formula">V = I × R</p><p>If you know two of the three, you can find the third. A 250 Ω resistor carrying 20 mA (0.020 A) drops 0.020 × 250 = <b>5 volts</b>. You'll use that exact fact on 4–20 mA loops all the time.</p><p><b>Power</b> is P = I × V, in watts. It tells you how much heat a part must handle.</p>` },
     { h: "Series vs. parallel", b: `<ul><li><b>Series</b> (one path): the <b>same current</b> flows through every part. Voltages add up to the supply. A 4–20 mA loop is a series circuit, so the current is identical everywhere in it.</li><li><b>Parallel</b> (several paths): every branch has the <b>same voltage</b>. Currents add up to the total.</li></ul><p><b>Kirchhoff's Voltage Law:</b> the voltage drops around any closed loop add up to the source voltage. This is how you account for where your 24 volts went.</p>` },
@@ -526,9 +526,10 @@ ART.m2 = [
 <g data-tip="24 VDC instrument loops: the voltage you'll work around most. Still respect it, but it's low energy.">
 <rect x="190" y="48" width="122" height="30" rx="5" fill="var(--ok-soft)" stroke="var(--ok)" stroke-width="1.5"/>
 <text x="198" y="60" class="lbl">24 VDC</text><text x="198" y="72" class="sm">instrument loops</text></g>
+<g data-tip="120 VAC feeds outlets, small lighting and some 4-wire instruments. It can stop a heart. Some plant lighting runs on 277 V, which is one phase of a 480 V system to ground.">
 <rect x="190" y="84" width="122" height="30" rx="5" fill="var(--warn-soft)" stroke="var(--tag)" stroke-width="1.5"/>
-<text x="198" y="96" class="lbl">120 VAC</text><text x="198" y="108" class="sm">lights, outlets</text>
-<g data-tip="480 VAC and up feeds motors and heaters. It can kill. Know what's in the box before a lead goes down.">
+<text x="198" y="96" class="lbl">120 VAC</text><text x="198" y="108" class="sm">lights, outlets</text></g>
+<g data-tip="480 VAC and up feeds motors and heaters. It is three-phase: 480 V between any two phases, about 277 V from a phase to ground. It can kill. De-energize and lock out before you work on it.">
 <rect x="190" y="120" width="122" height="30" rx="5" fill="var(--bad-soft)" stroke="var(--bad)" stroke-width="1.5"/>
 <text x="198" y="132" class="lbl">480 VAC+</text><text x="198" y="144" class="sm">motors, heaters</text>
 <path d="M296 124 L288 136 H294 L290 147 L302 132 H296 L300 124 Z" fill="var(--bad)" stroke="none" class="pulse"/></g>
@@ -2349,7 +2350,11 @@ function makeCtx(svg, host, key) {
       const g = document.createElementNS(SVGNS, "g"); g.setAttribute("class", "ihandle");
       g.innerHTML = `<circle r="18" fill="var(--tag)" opacity="0" class="ihit"/><circle r="12" fill="none" stroke="var(--tag)" stroke-width="2" class="iring"/><circle r="7" fill="var(--tag)" stroke="var(--ink)" stroke-width="2"/>`;
       svg.appendChild(g); ctx.place(g, x, y);
-      if (hint) { const t = document.createElementNS(SVGNS, "text"); t.setAttribute("class", "ihint lbl"); t.setAttribute("x", x + 16); t.setAttribute("y", y - 12); t.style.fill = "var(--tag)"; t.textContent = hint; svg.appendChild(t); }
+      if (hint) { const t = document.createElementNS(SVGNS, "text"); t.setAttribute("class", "ihint lbl"); t.setAttribute("x", x + 16); t.setAttribute("y", y - 12); t.style.fill = "var(--tag)"; t.textContent = hint; svg.appendChild(t);
+        /* keep the hint inside the picture: flip it to the left of a handle near the right edge */
+        const vbw = svg.viewBox.baseVal.width || 320; let tw = hint.length * 6.2; try { tw = t.getBBox().width || tw; } catch {}
+        if (x + 16 + tw > vbw - 2) { t.setAttribute("text-anchor", "end"); t.setAttribute("x", Math.max(tw + 2, x - 16)); }
+        if (y - 12 < 11) t.setAttribute("y", y + 26); }
       return g;
     },
     place(g, x, y) { g.setAttribute("transform", `translate(${x} ${y})`); },
@@ -2809,7 +2814,7 @@ INTERACT.m2 = [
 <rect x="14" y="56" width="50" height="94" rx="4" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
 <text x="39" y="98" text-anchor="middle" class="lbl" id="m2c1-sl">24 V</text>
 <text x="39" y="111" text-anchor="middle" class="sm" id="m2c1-st">DC supply</text>
-<text x="54" y="74" text-anchor="middle" class="lbl">+</text><text x="54" y="140" text-anchor="middle" class="lbl">−</text></g>
+<text x="54" y="74" text-anchor="middle" class="lbl" id="m2c1-tp">+</text><text x="54" y="140" text-anchor="middle" class="lbl" id="m2c1-tn">−</text></g>
 <path d="M64 70 H112 M152 70 H190 V86 M190 126 V136 H64" fill="none" stroke="var(--ink)" stroke-width="2"/>
 <g data-tip="R1, 300 Ω. Current through it uses up part of the push: 6 of the 24 volts.">
 <path d="M112 70 L115 63 L120 77 L125 63 L130 77 L135 63 L140 77 L145 63 L150 77 L152 70" fill="none" stroke="var(--ink)" stroke-width="2.2"/>
@@ -2820,7 +2825,7 @@ INTERACT.m2 = [
 <g fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5">
 <circle cx="64" cy="70" r="4"/><circle cx="96" cy="70" r="4"/><circle cx="172" cy="70" r="4"/><circle cx="150" cy="136" r="4"/><circle cx="64" cy="136" r="4"/></g>
 <text x="96" y="86" text-anchor="middle" class="lbl">A</text><text x="172" y="58" text-anchor="middle" class="lbl">B</text><text x="150" y="152" text-anchor="middle" class="lbl">C</text>
-<g data-tip="The meter only ever reads the difference between where the red and black probes touch. Same point, or same wire, means no difference: 0 V.">
+<g data-tip="The meter only ever reads the difference between where the red and black probes touch. Same point, or same wire, means no difference: 0 V. On plant power the meter and its leads need the right rating: at least CAT III 600 V for a 480 V panel.">
 <rect x="238" y="16" width="70" height="98" rx="8" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>
 <rect x="244" y="23" width="58" height="24" rx="2" fill="var(--accent-soft)" stroke="var(--ink)" stroke-width="1"/>
 <text x="273" y="40" text-anchor="middle" class="lbl" id="m2c1-mv">--.-</text>
@@ -2836,6 +2841,9 @@ INTERACT.m2 = [
     const s = ctx.state; s.sup = "dc"; s.V = 24;
     const PTS = [{ x: 64, y: 70, n: "+", f: 1 }, { x: 96, y: 70, n: "A", f: 1 }, { x: 172, y: 70, n: "B", f: 0.75 }, { x: 150, y: 136, n: "C", f: 0 }, { x: 64, y: 136, n: "−", f: 0 }];
     const ro = ctx.readouts([{ key: "red", label: "Red probe on" }, { key: "blk", label: "Black probe on" }, { key: "v", label: "Meter reads" }]);
+    /* the two supply terminals are + and − on DC, L and N on 120 VAC, and two of the three phases on 480 VAC */
+    const TN = () => s.V === 480 ? ["L1", "L2"] : s.V === 120 ? ["L", "N"] : ["+", "−"];
+    const nm = (i) => i === 0 ? TN()[0] : i === 4 ? TN()[1] : PTS[i].n;
     const read = () => {
       const [r, b] = pr.at; if (r == null || b == null) return null;
       const v = (PTS[r].f - PTS[b].f) * s.V; return s.sup === "dc" ? v : Math.abs(v);
@@ -2844,8 +2852,10 @@ INTERACT.m2 = [
       const [r, b] = pr.at, v = read(), ac = s.sup !== "dc", u = ac ? " V~" : " V";
       ctx.text("#m2c1-mv", v == null ? "--.-" : fmt(v, 1).replace("-", "−") + (ac ? "~" : ""));
       ctx.text("#m2c1-mm", ac ? "V~" : "V⎓"); ctx.attr("#m2c1-knob", "d", ac ? "M273 70 L281 61" : "M273 70 L265 61");
-      ctx.text("#m2c1-sl", s.V + " V"); ctx.text("#m2c1-st", ac ? "AC supply" : "DC supply");
-      ro.set("red", r == null ? "air" : PTS[r].n); ro.set("blk", b == null ? "air" : PTS[b].n);
+      ctx.text("#m2c1-sl", s.V + " V"); ctx.text("#m2c1-st", s.V === 480 ? "2 phases" : ac ? "AC supply" : "DC supply");
+      ctx.text("#m2c1-tp", TN()[0]); ctx.text("#m2c1-tn", TN()[1]); ctx.attr("#m2c1-tp", "x", ac ? 49 : 54); ctx.attr("#m2c1-tn", "x", ac ? 49 : 54);
+      ctx.host.querySelectorAll(".ichoices").forEach((seg) => { if (seg.children.length > 4) { seg.children[0].textContent = TN()[0]; seg.children[4].textContent = TN()[1]; } });
+      ro.set("red", r == null ? "air" : nm(r)); ro.set("blk", b == null ? "air" : nm(b));
       ro.set("v", v == null ? "--.-" : fmt(v, 1).replace("-", "−") + u, v == null ? "" : s.V > 24 ? "bad" : "ok");
       if (v != null && s.sup === "dc") {
         if (Math.abs(v - 24) < 0.05) s.t1 = true;
@@ -2856,10 +2866,10 @@ INTERACT.m2 = [
       let msg, kind = "info";
       if (r == null || b == null) msg = "A voltmeter needs <b>both</b> leads touching. Drag the red and black probe tips onto two test points.";
       else if (r === b) msg = "Both probes on the same point: <b>0 V</b>. There's no difference in push between a point and itself.";
-      else if (PTS[r].f === PTS[b].f) msg = `<b>0 V</b> between ${PTS[r].n} and ${PTS[b].n}. They're on the same piece of wire, so they have the same push. A good wire has (almost) no voltage across it.`;
-      else if (ac) msg = `<b>${fmt(v, 0)} V AC</b> between ${PTS[r].n} and ${PTS[b].n}. AC has no + or −, so swapping leads still reads positive. ${s.V >= 480 ? "<b>480 V can kill.</b> Only qualified people with arc-flash PPE work on it live." : "Set the meter to V~ and treat 120 V with respect: it can stop a heart."}`, kind = s.V >= 480 ? "bad" : "warn";
+      else if (PTS[r].f === PTS[b].f) msg = `<b>0 V</b> between ${nm(r)} and ${nm(b)}. They're on the same piece of wire, so they have the same push. A good wire has (almost) no voltage across it.`;
+      else if (ac) msg = `<b>${fmt(v, 0)} V AC</b> between ${nm(r)} and ${nm(b)}. AC has no + or −, so swapping leads still reads positive. ${s.V >= 480 ? "This box holds two of the three phases: 480 V between any two phases, about 277 V from one phase to ground. <b>480 V can kill.</b> The rule is to de-energize and lock out first. Testing live is only for qualified people with shock and arc-flash protection and a meter rated CAT III 600 V or better." : "L is the hot wire and N is the neutral. Set the meter to V~ and treat 120 V with respect: it can stop a heart."}`, kind = s.V >= 480 ? "bad" : "warn";
       else if (v < 0) msg = `<b>${fmt(v, 1).replace("-", "−")} V.</b> The minus sign means the red probe is on the <i>lower</i> point. The push is the same ${fmt(-v, 1)} V; you've just got the leads backwards.`, kind = "warn";
-      else msg = `<b>${fmt(v, 1)} V</b> between ${PTS[r].n} (red) and ${PTS[b].n} (black). ${Math.abs(v - 24) < 0.05 ? "That's the whole supply." : Math.abs(v - 6) < 0.05 ? "That's the drop across R1 alone." : Math.abs(v - 18) < 0.05 ? "That's the drop across R2. 6 + 18 = 24: every volt is accounted for." : ""}`;
+      else msg = `<b>${fmt(v, 1)} V</b> between ${nm(r)} (red) and ${nm(b)} (black). ${Math.abs(v - 24) < 0.05 ? "That's the whole supply." : Math.abs(v - 6) < 0.05 ? "That's the drop across R1 alone." : Math.abs(v - 18) < 0.05 ? "That's the drop across R2. 6 + 18 = 24: every volt is accounted for." : ""}`;
       ctx.say(msg, kind);
     };
     const pr = probes(ctx, { pts: PTS, jacks: [[288, 102], [258, 102]], park: [[294, 150], [262, 150]], onChange: () => render(), hint: "drag a probe" });
@@ -5643,7 +5653,7 @@ INTERACT.m8[3] = {
 <line x1="236" y1="90" x2="310" y2="90" stroke="var(--line)" stroke-width="1"/>
 <text x="240" y="104" class="sm">now DP</text><text id="m8c4-dp" x="240" y="118" class="lbl">59.5</text>
 <text x="240" y="134" class="sm">indicated</text><text id="m8c4-ind" x="240" y="148" class="lbl">50.0%</text>
-<text id="m8c4-cfg" x="272" y="166" class="sm" text-anchor="middle">matches install ✓</text>
+<text id="m8c4-cfg" x="268" y="166" class="sm" text-anchor="middle">matches install ✓</text>
 </svg>`,
   run(ctx) {
     const s = ctx.state; s.lvl = 50; s.m = 20; s.leg = "dry"; s.sg = 0.85; s.pv = 20; s.cfg = { m: 20, leg: "dry" };
@@ -5667,7 +5677,7 @@ INTERACT.m8[3] = {
       ctx.text("#m8c4-mh", s.m ? `${s.m}″ below tap` : "at tap level"); ctx.attr("#m8c4-mh", "y", yt + 28); ctx.attr("#m8c4-mh", "x", 185);
       ctx.text("#m8c4-lrv", "LRV " + fmt(c.lrv, 1)); ctx.text("#m8c4-urv", "URV " + fmt(c.urv, 1)); ctx.text("#m8c4-dp", fmt(c.dp, 1)); ctx.text("#m8c4-ind", fmt(c.ind, 1) + "%");
       const off = Math.abs(c.ind - s.lvl) > 1; ctx.style("#m8c4-ind", "fill", off ? "var(--bad)" : "var(--ok)");
-      ctx.text("#m8c4-cfg", match ? "matches install ✓" : "set for old install ✗"); ctx.style("#m8c4-cfg", "fill", match ? "var(--ok)" : "var(--bad)");
+      ctx.text("#m8c4-cfg", match ? "matches install ✓" : "old-install range ✗"); ctx.style("#m8c4-cfg", "fill", match ? "var(--ok)" : "var(--bad)");
       ro.set("h", fmt(c.H, 1) + " inH₂O"); ro.set("l", fmt(c.L, 1) + " inH₂O"); ro.set("dp", fmt(c.dp, 1) + " inH₂O", c.dp < 0 ? "warn" : ""); ro.set("ma", fmt(c.ma, 2) + " mA", off ? "bad" : "ok");
       hist.push(c.ind);
       const parts = `H = vessel ${fmt(c.Pv, 0)} + liquid ${fmt(s.sg * s.lvl, 1)} + impulse line ${fmt(s.sg * s.m, 1)}. L = vessel ${fmt(c.Pv, 0)}${wet ? ` + wet leg ${fmt(0.85 * (TAPS + s.m), 1)}` : ""}. The vessel pressure cancels.`;
